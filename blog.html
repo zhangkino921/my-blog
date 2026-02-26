@@ -1,0 +1,1080 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>垃圾佬の博客 | 硬核技术小站</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Noto+Sans+SC:wght@300;400;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-deep: #0b0e14;
+    --bg-card: #0f1520;
+    --bg-card2: #111827;
+    --accent: #00a1ff;
+    --accent2: #0066cc;
+    --accent-glow: rgba(0, 161, 255, 0.35);
+    --accent-dim: rgba(0, 161, 255, 0.12);
+    --text: #e0e0e0;
+    --text-dim: #7a8a9a;
+    --text-muted: #3a4a5a;
+    --border: rgba(0, 161, 255, 0.18);
+    --border-bright: rgba(0, 161, 255, 0.5);
+    --green: #00ff88;
+    --orange: #ff6a00;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background-color: var(--bg-deep);
+    color: var(--text);
+    font-family: 'Noto Sans SC', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    cursor: crosshair;
+  }
+
+  #circuit-bg {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    opacity: 0.18;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.06) 2px,rgba(0,0,0,0.06) 4px);
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.7) 100%);
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .page-wrap {
+    position: relative;
+    z-index: 10;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+
+  /* NAV */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(11, 14, 20, 0.88);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+  }
+
+  .nav-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+  }
+
+  .logo {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: 1.2rem;
+    color: var(--accent);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-shadow: 0 0 20px var(--accent-glow);
+    letter-spacing: 2px;
+  }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    border: 2px solid var(--accent);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 0 12px var(--accent-glow), inset 0 0 8px var(--accent-dim);
+    animation: pulse-border 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-border {
+    0%,100% { box-shadow: 0 0 12px var(--accent-glow), inset 0 0 8px var(--accent-dim); }
+    50% { box-shadow: 0 0 24px var(--accent-glow), inset 0 0 16px rgba(0,161,255,0.2); }
+  }
+
+  nav { display: flex; gap: 2rem; }
+
+  nav a {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    text-decoration: none;
+    letter-spacing: 1px;
+    transition: color 0.2s, text-shadow 0.2s;
+    position: relative;
+  }
+
+  nav a::after {
+    content: '';
+    position: absolute;
+    bottom: -4px; left: 0;
+    width: 0; height: 1px;
+    background: var(--accent);
+    transition: width 0.25s;
+    box-shadow: 0 0 6px var(--accent);
+  }
+
+  nav a:hover { color: var(--accent); text-shadow: 0 0 12px var(--accent-glow); }
+  nav a:hover::after { width: 100%; }
+
+  .nav-status {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--green);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-shadow: 0 0 8px rgba(0,255,136,0.5);
+  }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 8px var(--green);
+    animation: blink 1.4s ease-in-out infinite;
+  }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  /* HERO */
+  .hero {
+    min-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 6rem 0 4rem;
+  }
+
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+  }
+
+  .hero-tag {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 1.2rem;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.2s forwards;
+  }
+
+  .hero-title {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(2.2rem, 4vw, 3.5rem);
+    font-weight: 900;
+    line-height: 1.15;
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.4s forwards;
+  }
+
+  .hero-title span {
+    color: var(--accent);
+    text-shadow: 0 0 30px var(--accent-glow);
+    display: block;
+  }
+
+  .hero-desc {
+    font-size: 1rem;
+    color: var(--text-dim);
+    line-height: 1.8;
+    max-width: 480px;
+    margin-bottom: 2.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.6s forwards;
+  }
+
+  .hero-btns {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.8s forwards;
+  }
+
+  .btn {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.85rem;
+    padding: 0.75rem 1.8rem;
+    border-radius: 4px;
+    text-decoration: none;
+    letter-spacing: 1.5px;
+    transition: all 0.25s;
+    cursor: pointer;
+    border: none;
+    display: inline-block;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #000;
+    font-weight: 700;
+    box-shadow: 0 0 20px var(--accent-glow);
+  }
+
+  .btn-primary:hover {
+    box-shadow: 0 0 40px var(--accent-glow), 0 0 80px rgba(0,161,255,0.2);
+    transform: translateY(-2px);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--accent);
+    border: 1px solid var(--border-bright);
+    box-shadow: inset 0 0 12px var(--accent-dim);
+  }
+
+  .btn-ghost:hover {
+    background: var(--accent-dim);
+    box-shadow: inset 0 0 20px var(--accent-dim), 0 0 20px var(--accent-glow);
+    transform: translateY(-2px);
+  }
+
+  /* GPU 3D */
+  .gpu-visual {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    animation: fadeIn 1s 1s forwards;
+  }
+
+  .gpu-scene {
+    perspective: 600px;
+    width: 320px;
+    height: 320px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+
+  .gpu-card-3d {
+    width: 260px;
+    height: 160px;
+    position: relative;
+    transform-style: preserve-3d;
+    animation: gpu-rotate 8s ease-in-out infinite;
+  }
+
+  @keyframes gpu-rotate {
+    0%   { transform: rotateY(-25deg) rotateX(8deg); }
+    25%  { transform: rotateY(15deg) rotateX(-5deg); }
+    50%  { transform: rotateY(25deg) rotateX(8deg); }
+    75%  { transform: rotateY(-10deg) rotateX(-3deg); }
+    100% { transform: rotateY(-25deg) rotateX(8deg); }
+  }
+
+  .gpu-face {
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #0d1830 0%, #0a1525 40%, #071020 100%);
+    border: 1.5px solid var(--border-bright);
+    box-shadow: 0 0 40px rgba(0,161,255,0.3), 0 0 80px rgba(0,161,255,0.1), inset 0 0 30px rgba(0,161,255,0.05);
+    display: flex;
+    flex-direction: column;
+    padding: 14px 18px;
+    overflow: hidden;
+  }
+
+  .gpu-face::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: linear-gradient(var(--accent-dim) 1px, transparent 1px), linear-gradient(90deg, var(--accent-dim) 1px, transparent 1px);
+    background-size: 18px 18px;
+    opacity: 0.4;
+  }
+
+  .gpu-brand {
+    font-family: 'Orbitron', monospace;
+    font-size: 0.65rem;
+    color: var(--accent);
+    letter-spacing: 3px;
+    z-index: 1;
+    text-shadow: 0 0 8px var(--accent-glow);
+  }
+
+  .gpu-model {
+    font-family: 'Orbitron', monospace;
+    font-size: 1.2rem;
+    font-weight: 900;
+    color: #fff;
+    z-index: 1;
+    margin-top: 4px;
+    text-shadow: 0 0 15px rgba(255,255,255,0.4);
+  }
+
+  .gpu-heatsink { display: flex; gap: 5px; margin-top: auto; z-index: 1; }
+
+  .fan {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    border: 2px solid rgba(0,161,255,0.6);
+    background: radial-gradient(circle, #0a1a2e 30%, #051020 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fan-spin 1.2s linear infinite;
+    box-shadow: 0 0 12px var(--accent-glow);
+    position: relative;
+  }
+
+  .fan::before {
+    content: '';
+    position: absolute;
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    background: conic-gradient(
+      from 0deg,
+      var(--accent-dim) 0deg, var(--accent) 30deg,
+      var(--accent-dim) 60deg, var(--accent) 90deg,
+      var(--accent-dim) 120deg, var(--accent) 150deg,
+      var(--accent-dim) 180deg, var(--accent) 210deg,
+      var(--accent-dim) 240deg, var(--accent) 270deg,
+      var(--accent-dim) 300deg, var(--accent) 330deg, var(--accent-dim) 360deg
+    );
+    clip-path: polygon(50% 50%, 65% 0%, 85% 15%, 100% 50%, 85% 85%, 65% 100%, 35% 100%, 15% 85%, 0% 50%, 15% 15%, 35% 0%);
+  }
+
+  @keyframes fan-spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+
+  .gpu-ports {
+    position: absolute;
+    right: 14px; bottom: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    z-index: 1;
+  }
+
+  .port {
+    width: 22px; height: 5px;
+    background: #00a1ff;
+    border-radius: 1px;
+    box-shadow: 0 0 6px var(--accent);
+    opacity: 0.8;
+  }
+
+  .gpu-glow-ring {
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid rgba(0,161,255,0.08);
+    animation: ring-pulse 3s ease-in-out infinite;
+  }
+
+  @keyframes ring-pulse {
+    0%,100%{opacity:0.5;transform:scale(1)}
+    50%{opacity:0.15;transform:scale(1.02)}
+  }
+
+  @keyframes fadeUp {
+    from{opacity:0;transform:translateY(24px)}
+    to{opacity:1;transform:translateY(0)}
+  }
+
+  @keyframes fadeIn {
+    from{opacity:0} to{opacity:1}
+  }
+
+  /* STATS TICKER */
+  .stats-bar {
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    background: rgba(0, 161, 255, 0.04);
+    padding: 1rem 0;
+    overflow: hidden;
+    position: relative;
+    z-index: 10;
+  }
+
+  .stats-bar::before, .stats-bar::after {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 80px;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .stats-bar::before { left: 0; background: linear-gradient(to right, var(--bg-deep), transparent); }
+  .stats-bar::after  { right: 0; background: linear-gradient(to left, var(--bg-deep), transparent); }
+
+  .stats-ticker {
+    display: flex;
+    gap: 4rem;
+    animation: ticker-scroll 25s linear infinite;
+    white-space: nowrap;
+  }
+
+  .stat-item {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-shrink: 0;
+  }
+
+  .stat-item strong { color: var(--accent); }
+  .stat-item em { color: var(--green); font-style: normal; }
+
+  @keyframes ticker-scroll { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+
+  /* SECTIONS */
+  .section { padding: 5rem 0; }
+
+  .section-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 3rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-title {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(1.3rem, 2.5vw, 1.8rem);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .section-title .icon { font-size: 1.4rem; }
+
+  .section-title .line {
+    display: inline-block;
+    width: 40px; height: 2px;
+    background: linear-gradient(to right, var(--accent), transparent);
+    margin-left: 0.5rem;
+    vertical-align: middle;
+  }
+
+  .section-link {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--accent);
+    text-decoration: none;
+    letter-spacing: 1px;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+  }
+
+  .section-link:hover { opacity: 1; }
+
+  /* CARDS */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.6rem;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
+    cursor: pointer;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(to right, transparent, var(--accent), transparent);
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+
+  .card::after {
+    content: '';
+    position: absolute;
+    bottom: 14px; right: 14px;
+    width: 30px; height: 30px;
+    border-bottom: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    border-radius: 0 0 4px 0;
+    opacity: 0.5;
+    transition: opacity 0.25s;
+  }
+
+  .card:hover { border-color: var(--border-bright); transform: translateY(-4px); box-shadow: 0 8px 30px rgba(0,161,255,0.15); }
+  .card:hover::before { opacity: 1; }
+  .card:hover::after { opacity: 1; border-color: var(--accent); }
+
+  .card-meta {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    margin-bottom: 0.7rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .tag {
+    background: var(--accent-dim);
+    color: var(--accent);
+    border: 1px solid rgba(0,161,255,0.25);
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 0.68rem;
+    font-family: 'Share Tech Mono', monospace;
+    letter-spacing: 1px;
+  }
+
+  .tag.green { background: rgba(0,255,136,0.1); color: var(--green); border-color: rgba(0,255,136,0.25); }
+  .tag.orange { background: rgba(255,106,0,0.1); color: var(--orange); border-color: rgba(255,106,0,0.25); }
+
+  .card-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.6rem; line-height: 1.4; color: #f0f4f8; }
+  .card-desc { font-size: 0.88rem; color: var(--text-dim); line-height: 1.7; }
+
+  .card-footer {
+    margin-top: 1.2rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .card-date { font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; color: var(--text-muted); }
+
+  .card-arrow {
+    color: var(--accent);
+    font-size: 0.9rem;
+    opacity: 0;
+    transform: translateX(-8px);
+    transition: opacity 0.2s, transform 0.2s;
+  }
+
+  .card:hover .card-arrow { opacity: 1; transform: translateX(0); }
+
+  /* FEATURED */
+  .card-featured {
+    grid-column: span 2;
+    background: linear-gradient(135deg, #0f1a2e 0%, #0a1220 100%);
+    border-color: rgba(0,161,255,0.3);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    align-items: center;
+    padding: 2.5rem;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #000;
+    font-family: 'Orbitron', monospace;
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 3px;
+    margin-bottom: 1rem;
+    letter-spacing: 2px;
+  }
+
+  .card-featured .card-title { font-size: 1.4rem; }
+
+  .spec-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+  .spec-row { display: flex; align-items: center; gap: 0.75rem; font-family: 'Share Tech Mono', monospace; font-size: 0.78rem; }
+  .spec-label { color: var(--text-muted); width: 90px; flex-shrink: 0; }
+  .spec-value { color: var(--text); }
+
+  .spec-bar-wrap { flex: 1; height: 3px; background: var(--text-muted); border-radius: 2px; overflow: hidden; }
+
+  .spec-bar {
+    height: 100%;
+    background: linear-gradient(to right, var(--accent2), var(--accent));
+    border-radius: 2px;
+    box-shadow: 0 0 8px var(--accent-glow);
+    transition: width 1s ease;
+  }
+
+  /* FRAGMENTS */
+  .fragments-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+  }
+
+  .frag-card {
+    background: var(--bg-card2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.2rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .frag-card:hover {
+    border-color: rgba(0,161,255,0.4);
+    box-shadow: 0 4px 20px rgba(0,161,255,0.1);
+  }
+
+  .frag-emoji { font-size: 1.6rem; margin-bottom: 0.5rem; display: block; }
+  .frag-text { font-size: 0.9rem; color: var(--text-dim); line-height: 1.6; }
+
+  /* PORTAL */
+  .portal-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1.2rem;
+  }
+
+  .portal-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-decoration: none;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.25s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .portal-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--accent-dim), transparent);
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+
+  .portal-card:hover { border-color: var(--border-bright); transform: translateY(-3px); box-shadow: 0 8px 30px rgba(0,161,255,0.15); }
+  .portal-card:hover::before { opacity: 1; }
+
+  .portal-icon {
+    width: 48px; height: 48px;
+    border-radius: 10px;
+    background: var(--accent-dim);
+    border: 1px solid rgba(0,161,255,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  .portal-info { position: relative; z-index: 1; }
+  .portal-name { font-weight: 700; font-size: 1rem; margin-bottom: 2px; }
+  .portal-handle { font-family: 'Share Tech Mono', monospace; font-size: 0.75rem; color: var(--text-muted); }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2.5rem 2rem;
+    position: relative;
+    z-index: 10;
+  }
+
+  .footer-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .footer-copy { font-family: 'Share Tech Mono', monospace; font-size: 0.75rem; color: var(--text-muted); }
+  .footer-copy a { color: var(--accent); text-decoration: none; }
+
+  .footer-sys {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    display: flex;
+    gap: 1.5rem;
+  }
+
+  .cursor-blink {
+    display: inline-block;
+    width: 2px; height: 1em;
+    background: var(--accent);
+    animation: blink 0.8s step-end infinite;
+    vertical-align: text-bottom;
+    margin-left: 2px;
+  }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg-deep); }
+  ::-webkit-scrollbar-thumb { background: rgba(0,161,255,0.3); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+</style>
+</head>
+<body>
+
+<svg id="circuit-bg" viewBox="0 0 1200 800" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#00a1ff" stroke-width="0.3"/>
+    </pattern>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#grid)"/>
+  <g stroke="#00a1ff" stroke-width="1.2" fill="none" opacity="0.7">
+    <path d="M 0 200 H 180 V 120 H 340 V 200 H 520 V 80 H 700 H 900 V 200 H 1100 V 120 H 1200"/>
+    <path d="M 200 400 H 400 V 320 H 600 V 440 H 800 V 360 H 1000 V 440 H 1200"/>
+    <path d="M 0 600 H 150 V 520 H 350 V 640 H 550 V 560 H 750 V 640 H 1000 V 560 H 1200"/>
+    <path d="M 120 0 V 200 M 340 200 V 400 M 600 80 V 320 M 800 440 V 640 M 1000 360 V 560"/>
+    <path d="M 500 0 V 80 M 240 400 V 600 M 900 0 V 200 M 650 440 V 640"/>
+  </g>
+  <g fill="#00a1ff" opacity="0.8">
+    <circle cx="180" cy="200" r="3"/><circle cx="340" cy="120" r="3"/><circle cx="520" cy="200" r="3"/>
+    <circle cx="700" cy="80" r="3"/><circle cx="900" cy="200" r="3"/><circle cx="1100" cy="120" r="3"/>
+    <circle cx="400" cy="320" r="3"/><circle cx="600" cy="440" r="3"/><circle cx="800" cy="360" r="3"/>
+    <circle cx="150" cy="520" r="3"/><circle cx="350" cy="640" r="3"/><circle cx="550" cy="560" r="3"/>
+    <circle cx="750" cy="640" r="3"/><circle cx="1000" cy="560" r="3"/>
+  </g>
+  <g fill="none" stroke="#00a1ff" opacity="0.25">
+    <circle cx="180" cy="200" r="10"/><circle cx="700" cy="80" r="10"/>
+    <circle cx="600" cy="440" r="10"/><circle cx="350" cy="640" r="10"/>
+    <circle cx="900" cy="200" r="10"/><circle cx="1000" cy="560" r="10"/>
+  </g>
+</svg>
+
+<!-- HEADER -->
+<header>
+  <div class="nav-inner">
+    <a href="#" class="logo">
+      <div class="logo-icon">⚡</div>
+      JUNK_MASTER
+    </a>
+    <nav>
+      <a href="#tech">技术仓库</a>
+      <a href="#junk">垃圾佬</a>
+      <a href="#frags">灵感碎片</a>
+      <a href="#portal">传送门</a>
+    </nav>
+    <div class="nav-status">
+      <div class="status-dot"></div>
+      SYSTEM ONLINE
+    </div>
+  </div>
+</header>
+
+<!-- HERO -->
+<div class="page-wrap">
+  <section class="hero">
+    <div class="hero-grid">
+      <div>
+        <div class="hero-tag">// 欢迎来到我的小破站</div>
+        <h1 class="hero-title">
+          硬核技术宅<br>
+          <span>垃圾佬之魂</span>
+        </h1>
+        <p class="hero-desc">
+          折腾老显卡 · 写烂代码 · 收老硬件 · 发电路图<br>
+          8600GT 在我手里还能再战十年。<br><br>
+          <span style="font-family:'Share Tech Mono',monospace;font-size:0.85em;color:var(--accent)">
+            &gt; 欢迎同好，请随意浏览_<span class="cursor-blink"></span>
+          </span>
+        </p>
+        <div class="hero-btns">
+          <a href="#tech" class="btn btn-primary">查看文章</a>
+          <a href="#portal" class="btn btn-ghost">联系我</a>
+        </div>
+      </div>
+
+      <div class="gpu-visual">
+        <div class="gpu-scene">
+          <!-- glow rings -->
+          <div class="gpu-glow-ring" style="width:360px;height:360px;animation-delay:0s"></div>
+          <div class="gpu-glow-ring" style="width:430px;height:430px;animation-delay:1s"></div>
+          <div class="gpu-glow-ring" style="width:500px;height:500px;animation-delay:2s"></div>
+
+          <div class="gpu-card-3d">
+            <div class="gpu-face">
+              <div class="gpu-brand">GALAX · 影驰 · EXCELLENCE</div>
+              <div class="gpu-model">GeForce 8600 GT</div>
+              <div class="gpu-heatsink">
+                <div class="fan"></div>
+                <div class="fan" style="animation-delay:-0.5s"></div>
+              </div>
+              <div class="gpu-ports">
+                <div class="port"></div>
+                <div class="port"></div>
+                <div class="port" style="width:30px"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- STATS TICKER -->
+<div class="stats-bar">
+  <div class="stats-ticker">
+    <span class="stat-item">💾 已折腾显卡 <strong>23</strong> 块</span>
+    <span class="stat-item">🔧 成功复活主板 <em>✓ 7</em> 块</span>
+    <span class="stat-item">📝 技术文章 <strong>42</strong> 篇</span>
+    <span class="stat-item">⚡ GPU 核心超频成功 <em>+140MHz</em></span>
+    <span class="stat-item">🗑️ 捡漏二手累计花费 <strong>¥127</strong></span>
+    <span class="stat-item">🌡️ 峰值温度 <em>92°C</em> 但他活下来了</span>
+    <span class="stat-item">☕ 咖啡消耗 <strong>∞</strong> 杯</span>
+    <span class="stat-item">💾 已折腾显卡 <strong>23</strong> 块</span>
+    <span class="stat-item">🔧 成功复活主板 <em>✓ 7</em> 块</span>
+    <span class="stat-item">📝 技术文章 <strong>42</strong> 篇</span>
+    <span class="stat-item">⚡ GPU 核心超频成功 <em>+140MHz</em></span>
+    <span class="stat-item">🗑️ 捡漏二手累计花费 <strong>¥127</strong></span>
+    <span class="stat-item">🌡️ 峰值温度 <em>92°C</em> 但他活下来了</span>
+    <span class="stat-item">☕ 咖啡消耗 <strong>∞</strong> 杯</span>
+  </div>
+</div>
+
+<!-- TECH REPO -->
+<div class="page-wrap">
+  <section class="section" id="tech">
+    <div class="section-header">
+      <h2 class="section-title"><span class="icon">💡</span> 技术仓库 <span class="line"></span></h2>
+      <a href="#" class="section-link">查看全部 →</a>
+    </div>
+
+    <div class="card-grid">
+      <div class="card card-featured">
+        <div>
+          <div class="badge">⭐ 精选文章</div>
+          <div class="card-meta"><span class="tag">深度好文</span> <span class="tag green">已完结</span></div>
+          <div class="card-title">从捡垃圾到跑 LLM：GTX 1060 本地部署 llama.cpp 全记录</div>
+          <p class="card-desc">显存只有 6G，但梦想不受限制。从驱动兼容到量化参数的极限调教，手把手教你让老显卡焕发第二春。附带 VRAM 溢出应急方案 3 套。</p>
+          <div class="card-footer">
+            <span class="card-date">2024-11-08</span>
+            <span class="card-arrow">→ 阅读全文</span>
+          </div>
+        </div>
+        <div>
+          <div style="font-family:'Share Tech Mono',monospace;font-size:0.7rem;color:var(--text-muted);margin-bottom:0.8rem;letter-spacing:2px">// SPEC MONITOR</div>
+          <div class="spec-list">
+            <div class="spec-row">
+              <span class="spec-label">GPU MEM</span>
+              <div class="spec-bar-wrap"><div class="spec-bar" data-width="75%" style="width:0"></div></div>
+              <span class="spec-value">6GB</span>
+            </div>
+            <div class="spec-row">
+              <span class="spec-label">VRAM USE</span>
+              <div class="spec-bar-wrap"><div class="spec-bar" data-width="88%" style="width:0"></div></div>
+              <span class="spec-value">5.3G</span>
+            </div>
+            <div class="spec-row">
+              <span class="spec-label">TOKENS/S</span>
+              <div class="spec-bar-wrap"><div class="spec-bar" data-width="40%" style="width:0"></div></div>
+              <span class="spec-value">12/s</span>
+            </div>
+            <div class="spec-row">
+              <span class="spec-label">TEMP</span>
+              <div class="spec-bar-wrap"><div class="spec-bar" data-width="82%" style="width:0;background:linear-gradient(to right,#ff6a00,#ff9900)"></div></div>
+              <span class="spec-value" style="color:var(--orange)">78°C</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-meta"><span class="tag">Linux</span></div>
+        <div class="card-title">i915 驱动崩溃修复：核显用户的血泪教训</div>
+        <p class="card-desc">升完内核直接黑屏？别慌，这份排查手册覆盖 90% 的情况，从 dmesg 到 initramfs 逐步排查。</p>
+        <div class="card-footer"><span class="card-date">2024-10-14</span><span class="card-arrow">→</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-meta"><span class="tag">Python</span> <span class="tag green">开源</span></div>
+        <div class="card-title">用 200 行 Python 写一个 PCIe 带宽测速工具</div>
+        <p class="card-desc">不想装 GPU-Z？用 Python + mmap 直接读寄存器，原理+代码一锅端，附 GitHub 链接。</p>
+        <div class="card-footer"><span class="card-date">2024-09-03</span><span class="card-arrow">→</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-meta"><span class="tag orange">折腾</span></div>
+        <div class="card-title">在 2GB 内存的树莓派上跑 Docker Swarm 集群</div>
+        <p class="card-desc">极限资源分配+swap 魔法，穷人也能玩微服务。全程踩坑记录，不劝退。</p>
+        <div class="card-footer"><span class="card-date">2024-08-21</span><span class="card-arrow">→</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- JUNKYARD -->
+  <section class="section" id="junk">
+    <div class="section-header">
+      <h2 class="section-title"><span class="icon">🔧</span> 垃圾佬乐园 <span class="line"></span></h2>
+      <a href="#" class="section-link">查看全部 →</a>
+    </div>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-meta"><span class="tag orange">显卡</span> <span class="tag green">复活成功</span></div>
+        <div class="card-title">¥20 的影驰 8600GT 重焊 BGA 全程图文记录</div>
+        <p class="card-desc">花屏死机？核心虚焊！用热风枪+助焊剂，配合自制回流焊治具，把这块"废卡"彻底救回来。</p>
+        <div class="card-footer"><span class="card-date">2024-11-22</span><span class="card-arrow">→</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-meta"><span class="tag">主板</span> <span class="tag orange">危险操作</span></div>
+        <div class="card-title">LGA775 主板电容鼓包全换，复活 Q9650 的最后一搏</div>
+        <p class="card-desc">一块价值 ¥15 的华硕 P5Q，40 颗固态电容全部更换。焊接手法+容值选型详解，附踩坑总结。</p>
+        <div class="card-footer"><span class="card-date">2024-10-30</span><span class="card-arrow">→</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-meta"><span class="tag">散热</span></div>
+        <div class="card-title">思民散热器改装记：给 8600GT 换上 120mm 塔式风冷</div>
+        <p class="card-desc">散热器唐伯虎精神传承者。铝合金支架+导热硅脂重涂，把 TJ-Max 从 98°C 压到 62°C。</p>
+        <div class="card-footer"><span class="card-date">2024-09-15</span><span class="card-arrow">→</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-meta"><span class="tag green">捡漏</span></div>
+        <div class="card-title">闲鱼淘货指南：¥50 预算能买到什么程度的老主机？</div>
+        <p class="card-desc">实测 30 单买家秀，统计收货成色分布，给出最优竞价策略和鉴别卖家的话术秘籍。</p>
+        <div class="card-footer"><span class="card-date">2024-08-08</span><span class="card-arrow">→</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FRAGMENTS -->
+  <section class="section" id="frags">
+    <div class="section-header">
+      <h2 class="section-title"><span class="icon">📔</span> 灵感碎片 <span class="line"></span></h2>
+    </div>
+    <div class="fragments-grid">
+      <div class="frag-card"><span class="frag-emoji">🤡</span><div class="frag-text">别人降温靠水冷，我降温靠开窗户。效果拔群，尤其是冬天。</div></div>
+      <div class="frag-card"><span class="frag-emoji">💀</span><div class="frag-text">谁敢比我惨 Vol.1：显卡跑坏了，焊台也烧了，备用焊台没气了。</div></div>
+      <div class="frag-card"><span class="frag-emoji">📦</span><div class="frag-text">快递到了，盒子里躺着一块 FX5200，卖家写的"正常使用"。正常个锤子。</div></div>
+      <div class="frag-card"><span class="frag-emoji">⚡</span><div class="frag-text">超频成功的瞬间是全天最快乐的三秒，然后显卡停转了。</div></div>
+      <div class="frag-card"><span class="frag-emoji">🔥</span><div class="frag-text">导热硅脂不是涂越厚越好。我用事实验证了这条真理，代价是一块 HD5870。</div></div>
+      <div class="frag-card"><span class="frag-emoji">🧠</span><div class="frag-text">有没有可能买新的比修旧的便宜？有。但那样就不好玩了。</div></div>
+      <div class="frag-card"><span class="frag-emoji">🎮</span><div class="frag-text">在 8600GT 上跑《荒野大镖客2》——我做到了，帧率是 2。但我做到了。</div></div>
+      <div class="frag-card"><span class="frag-emoji">📡</span><div class="frag-text">垃圾佬人生哲学：万物皆可捡，何必花钱？（不适用于食物和键盘）</div></div>
+    </div>
+  </section>
+
+  <!-- PORTAL -->
+  <section class="section" id="portal">
+    <div class="section-header">
+      <h2 class="section-title"><span class="icon">📬</span> 传送门 <span class="line"></span></h2>
+    </div>
+    <div class="portal-grid">
+      <a href="https://github.com" class="portal-card" target="_blank">
+        <div class="portal-icon">🐙</div>
+        <div class="portal-info"><div class="portal-name">GitHub</div><div class="portal-handle">@junk_master</div></div>
+      </a>
+      <a href="https://bilibili.com" class="portal-card" target="_blank">
+        <div class="portal-icon">📺</div>
+        <div class="portal-info"><div class="portal-name">哔哩哔哩</div><div class="portal-handle">@垃圾佬修复实录</div></div>
+      </a>
+      <a href="https://zhihu.com" class="portal-card" target="_blank">
+        <div class="portal-icon">💬</div>
+        <div class="portal-info"><div class="portal-name">知乎</div><div class="portal-handle">@硬件折腾日记</div></div>
+      </a>
+      <a href="mailto:junkmaster@example.com" class="portal-card">
+        <div class="portal-icon">✉️</div>
+        <div class="portal-info"><div class="portal-name">邮件联系</div><div class="portal-handle">junkmaster@example.com</div></div>
+      </a>
+    </div>
+  </section>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-copy">© 2024 <a href="#">JUNK_MASTER</a> · 本站由 ¥20 的 VPS 驱动 · 保留所有折腾权利</div>
+    <div class="footer-sys">
+      <span>SYS: ONLINE</span>
+      <span>BUILD: v2.4.0</span>
+      <span>NODE: CN-EAST</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Animate spec bars on scroll
+  const barObserver = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.querySelectorAll('.spec-bar').forEach(bar => {
+          const target = bar.dataset.width;
+          setTimeout(() => { bar.style.width = target; }, 100);
+        });
+        barObserver.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.3 });
+
+  document.querySelectorAll('.card-featured').forEach(c => barObserver.observe(c));
+
+  // Smooth scroll
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth' }); }
+    });
+  });
+
+  // Cursor glow
+  const glow = document.createElement('div');
+  glow.style.cssText = 'position:fixed;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(0,161,255,0.05) 0%,transparent 70%);pointer-events:none;z-index:3;transform:translate(-50%,-50%);transition:left 0.1s,top 0.1s;';
+  document.body.appendChild(glow);
+  document.addEventListener('mousemove', e => { glow.style.left = e.clientX+'px'; glow.style.top = e.clientY+'px'; });
+
+  // Fan speed variation
+  document.querySelectorAll('.fan').forEach(fan => {
+    setInterval(() => {
+      fan.style.animationDuration = (0.4 + Math.random() * 1.4) + 's';
+    }, 1500 + Math.random() * 1000);
+  });
+</script>
+</body>
+</html>
