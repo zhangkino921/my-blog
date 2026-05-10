@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NETRUNNER DICE // 赛博朋克红骰子模拟器</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #080808;
+      --bg-secondary: #0f0f0f;
+      --bg-panel: #111111;
+      --bg-panel2: #141414;
+      --border: #2a0008;
+      --border-bright: #ff0033;
+      --accent-red: #ff0033;
+      --accent-red-dim: #cc0022;
+      --accent-red-glow: rgba(255,0,51,0.4);
+      --accent-yellow: #ffcc00;
+      --accent-cyan: #00e5ff;
+      --text-primary: #d0d0d0;
+      --text-dim: #555;
+      --text-bright: #ffffff;
+      --success: #00e676;
+      --failure: #ff3d00;
+      --critical-color: #ff0033;
+      --fumble-color: #ff6600;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { height: 100%; }
+
+    body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Share Tech Mono', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* ── Scanlines ── */
+    #scanlines {
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.18) 2px,
+        rgba(0,0,0,0.18) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+      animation: scanMove 8s linear infinite;
+    }
+    @keyframes scanMove {
+      from { background-position: 0 0; }
+      to   { background-position: 0 100px; }
+    }
+
+    /* ── Noise overlay ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 9998;
+      opacity: 0.6;
+    }
+
+    /* ── Header ── */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-secondary);
+      position: relative;
+      overflow: hidden;
+    }
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent-red), transparent);
+      animation: borderPulse 3s ease-in-out infinite;
+    }
+    @keyframes borderPulse {
+      0%,100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+    .header-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 900;
+      color: var(--accent-red);
+      text-shadow: 0 0 20px var(--accent-red-glow), 0 0 40px rgba(255,0,51,0.2);
+      letter-spacing: 0.1em;
+    }
+    .header-title span {
+      color: var(--text-dim);
+    }
+    .header-sub {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      letter-spacing: 0.2em;
+    }
+    .header-badge {
+      font-size: 0.65rem;
+      color: var(--accent-yellow);
+      border: 1px solid var(--accent-yellow);
+      padding: 3px 8px;
+      letter-spacing: 0.15em;
+      opacity: 0.8;
+    }
+
+    /* ── Main Grid ── */
+    #main-grid {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 0;
+      min-height: calc(100vh - 70px);
+    }
+
+    /* ── Panels ── */
+    #left-panel {
+      padding: 24px;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    #right-panel {
+      padding: 20px;
+      background: var(--bg-secondary);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      padding: 18px;
+      position: relative;
+    }
+    .panel-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 3px; height: 100%;
+      background: var(--accent-red-dim);
+    }
+    .panel-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.7rem;
+      color: var(--accent-red);
+      letter-spacing: 0.25em;
+      margin-bottom: 14px;
+      text-transform: uppercase;
+    }
+
+    /* ── Dice Display ── */
+    #dice-arena {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      min-height: 160px;
+    }
+    .die-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .die-face {
+      width: 100px;
+      height: 100px;
+      border: 2px solid var(--border);
+      background: var(--bg-panel2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 2.4rem;
+      font-weight: 900;
+      color: var(--text-primary);
+      position: relative;
+      clip-path: polygon(10% 0%, 90% 0%, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0% 90%, 0% 10%);
+      transition: all 0.3s;
+    }
+    .die-face.rolling {
+      animation: diceRollAnim 0.08s ease-in-out infinite;
+      border-color: var(--accent-red-dim);
+      color: var(--accent-red);
+    }
+    .die-face.critical {
+      border-color: var(--accent-red);
+      color: var(--accent-red);
+      box-shadow: 0 0 30px var(--accent-red-glow), inset 0 0 20px rgba(255,0,51,0.1);
+      animation: critPulse 0.5s ease-in-out infinite alternate;
+    }
+    .die-face.fumble {
+      border-color: var(--fumble-color);
+      color: var(--fumble-color);
+      box-shadow: 0 0 20px rgba(255,102,0,0.4), inset 0 0 15px rgba(255,102,0,0.1);
+    }
+    .die-face.success-glow {
+      border-color: var(--success);
+      color: var(--success);
+      box-shadow: 0 0 20px rgba(0,230,118,0.3);
+    }
+    @keyframes diceRollAnim {
+      0%   { transform: rotate(-2deg) scale(1.02); }
+      100% { transform: rotate(2deg) scale(0.98); }
+    }
+    @keyframes critPulse {
+      from { box-shadow: 0 0 20px var(--accent-red-glow); }
+      to   { box-shadow: 0 0 50px var(--accent-red-glow), 0 0 80px rgba(255,0,51,0.2); }
+    }
+    .die-label {
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      letter-spacing: 0.2em;
+    }
+    .die-extra {
+      font-size: 0.7rem;
+      color: var(--accent-yellow);
+      min-height: 16px;
+      text-align: center;
+    }
+
+    /* ── Result Display ── */
+    #result-display {
+      text-align: center;
+      padding: 16px;
+      position: relative;
+    }
+    #result-total {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 3.5rem;
+      font-weight: 900;
+      color: var(--text-primary);
+      line-height: 1;
+      transition: color 0.3s;
+    }
+    #result-total.success { color: var(--success); text-shadow: 0 0 20px rgba(0,230,118,0.5); }
+    #result-total.failure { color: var(--failure); text-shadow: 0 0 20px rgba(255,61,0,0.5); }
+    #result-total.critical { color: var(--critical-color); text-shadow: 0 0 30px var(--accent-red-glow); animation: glitchText 0.15s steps(1) infinite; }
+    #result-total.fumble-result { color: var(--fumble-color); }
+    @keyframes glitchText {
+      0%   { text-shadow: 2px 0 #ff0033, -2px 0 #00e5ff; }
+      33%  { text-shadow: -2px 0 #ff0033, 2px 0 #00e5ff; }
+      66%  { text-shadow: 0 2px #ff0033, 0 -2px #00e5ff; }
+      100% { text-shadow: 2px 0 #ff0033, -2px 0 #00e5ff; }
+    }
+    #result-label {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      letter-spacing: 0.2em;
+      margin-top: 6px;
+    }
+    #result-judgment {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-top: 8px;
+      letter-spacing: 0.15em;
+      min-height: 28px;
+    }
+    #result-judgment.success { color: var(--success); }
+    #result-judgment.failure { color: var(--failure); }
+    #result-judgment.critical { color: var(--critical-color); animation: glitchText 0.15s steps(1) infinite; }
+    #result-judgment.fumble-result { color: var(--fumble-color); }
+    #result-detail {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      margin-top: 6px;
+      min-height: 18px;
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    /* ── Skill Check Panel ── */
+    .input-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .input-group label {
+      font-size: 0.62rem;
+      color: var(--accent-red);
+      letter-spacing: 0.2em;
+    }
+    .input-group input,
+    .input-group select {
+      background: var(--bg-primary);
+      border: 1px solid #2a0008;
+      color: var(--text-primary);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 1rem;
+      padding: 6px 10px;
+      width: 70px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .input-group select { width: 130px; cursor: pointer; }
+    .input-group input:focus,
+    .input-group select:focus {
+      border-color: var(--accent-red-dim);
+      box-shadow: 0 0 8px rgba(255,0,51,0.3);
+    }
+    .input-group input[type=number]::-webkit-inner-spin-button { opacity: 0.3; }
+
+    /* ── Buttons ── */
+    .btn {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      padding: 9px 18px;
+      border: 1px solid;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.15s;
+      background: transparent;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: currentColor;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .btn:hover::before { opacity: 0.08; }
+    .btn:active { transform: scale(0.97); }
+
+    .btn-primary {
+      color: var(--accent-red);
+      border-color: var(--accent-red);
+      box-shadow: 0 0 12px rgba(255,0,51,0.2);
+    }
+    .btn-primary:hover {
+      box-shadow: 0 0 20px rgba(255,0,51,0.5), inset 0 0 20px rgba(255,0,51,0.05);
+      color: #fff;
+    }
+    .btn-primary:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .btn-sm {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.75rem;
+      padding: 7px 12px;
+      letter-spacing: 0.1em;
+      color: var(--text-primary);
+      border-color: #333;
+    }
+    .btn-sm:hover {
+      color: var(--accent-red);
+      border-color: var(--accent-red-dim);
+    }
+
+    .btn-yellow {
+      color: var(--accent-yellow);
+      border-color: var(--accent-yellow);
+    }
+    .btn-yellow:hover { box-shadow: 0 0 16px rgba(255,204,0,0.4); }
+
+    .btn-cyan {
+      color: var(--accent-cyan);
+      border-color: var(--accent-cyan);
+    }
+    .btn-cyan:hover { box-shadow: 0 0 16px rgba(0,229,255,0.4); }
+
+    /* ── Quick Dice Grid ── */
+    #quick-panel .btn-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* ── Damage Panel ── */
+    #damage-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .dmg-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 8px 14px;
+    }
+    .dmg-btn .dmg-type {
+      font-size: 0.55rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+    }
+
+    /* ── Custom Roll ── */
+    #custom-roll-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    #custom-roll-row .sep {
+      color: var(--text-dim);
+      font-size: 1.1rem;
+    }
+    #custom-roll-row input[type=number] {
+      width: 58px;
+      text-align: center;
+    }
+
+    /* ── Roll Log ── */
+    #log-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    #log-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.7rem;
+      color: var(--accent-red);
+      letter-spacing: 0.2em;
+    }
+    #roll-log {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-right: 4px;
+    }
+    #roll-log::-webkit-scrollbar { width: 4px; }
+    #roll-log::-webkit-scrollbar-track { background: var(--bg-primary); }
+    #roll-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .log-entry {
+      background: var(--bg-panel);
+      border: 1px solid #1a1a1a;
+      border-left: 2px solid #333;
+      padding: 8px 10px;
+      font-size: 0.68rem;
+      line-height: 1.6;
+      animation: logSlide 0.2s ease-out;
+    }
+    @keyframes logSlide {
+      from { opacity: 0; transform: translateX(10px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    .log-entry.log-critical { border-left-color: var(--accent-red); box-shadow: inset 0 0 20px rgba(255,0,51,0.05), 0 0 8px rgba(255,0,51,0.15); }
+    .log-entry.log-fumble   { border-left-color: var(--fumble-color); background: rgba(255,102,0,0.04); }
+    .log-entry.log-success  { border-left-color: var(--success); }
+    .log-entry.log-fail     { border-left-color: var(--failure); }
+
+    .log-time  { color: var(--text-dim); font-size: 0.6rem; }
+    .log-type  { color: var(--text-dim); }
+    .log-total-success { color: var(--success); font-weight: bold; }
+    .log-total-fail    { color: var(--failure); font-weight: bold; }
+    .log-total-crit    { color: var(--critical-color); font-weight: bold; }
+    .log-total-fumble  { color: var(--fumble-color); font-weight: bold; }
+    .log-total-neutral { color: var(--text-primary); }
+    .log-badge {
+      display: inline-block;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.55rem;
+      padding: 1px 5px;
+      border: 1px solid;
+      letter-spacing: 0.1em;
+      margin-right: 4px;
+    }
+    .badge-crit  { color: var(--critical-color); border-color: var(--critical-color); }
+    .badge-fumble{ color: var(--fumble-color); border-color: var(--fumble-color); }
+    .badge-win   { color: var(--success); border-color: var(--success); }
+    .badge-fail  { color: var(--failure); border-color: var(--failure); }
+
+    #log-empty {
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      margin-top: 40px;
+    }
+
+    /* ── Footer ── */
+    footer {
+      grid-column: 1 / -1;
+      border-top: 1px solid var(--border);
+      padding: 12px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-secondary);
+      font-size: 0.62rem;
+      color: var(--text-dim);
+    }
+    footer a { color: var(--text-dim); text-decoration: none; }
+    footer a:hover { color: var(--accent-red); }
+
+    /* ── Screen Flash ── */
+    #screen-flash {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9000;
+      opacity: 0;
+      transition: opacity 0.05s;
+    }
+    #screen-flash.flash-red { background: rgba(255,0,51,0.12); }
+    #screen-flash.flash-orange { background: rgba(255,102,0,0.1); }
+    #screen-flash.flash-green { background: rgba(0,230,118,0.08); }
+
+    /* ── Initiative Modal ── */
+    #init-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 10000;
+      align-items: center;
+      justify-content: center;
+    }
+    #init-modal.open { display: flex; }
+    .modal-box {
+      background: var(--bg-panel);
+      border: 1px solid var(--accent-red-dim);
+      box-shadow: 0 0 40px rgba(255,0,51,0.2);
+      padding: 28px;
+      width: 280px;
+    }
+    .modal-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.8rem;
+      color: var(--accent-red);
+      letter-spacing: 0.2em;
+      margin-bottom: 16px;
+    }
+    .modal-box .input-group { margin-bottom: 16px; }
+    .modal-box .input-group input { width: 100%; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      #main-grid { grid-template-columns: 1fr; }
+      #right-panel {
+        border-top: 1px solid var(--border);
+        max-height: 420px;
+      }
+      footer { grid-column: 1; }
+    }
+    @media (max-width: 600px) {
+      header { padding: 14px 16px; }
+      .header-title { font-size: 1rem; }
+      #left-panel { padding: 16px; }
+      .die-face { width: 80px; height: 80px; font-size: 1.9rem; }
+      #result-total { font-size: 2.8rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="scanlines"></div>
+<div id="screen-flash"></div>
+
+<!-- Initiative Modal -->
+<div id="init-modal">
+  <div class="modal-box">
+    <div class="modal-title">先攻投掷 // INITIATIVE</div>
+    <div class="input-group">
+      <label>REF 属性值 (1-8)</label>
+      <input type="number" id="init-ref" min="1" max="8" value="4" style="width:100%">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-sm" onclick="closeInitModal()">取消</button>
+      <button class="btn btn-cyan" onclick="confirmInitiative()">投掷!</button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div>
+    <div class="header-title">NETRUNNER DICE <span>//</span> 骰子模拟器</div>
+    <div class="header-sub">CYBERPUNK RED SYSTEM · 赛博朋克红系统</div>
+  </div>
+  <div class="header-badge">v1.0 // NIGHT CITY</div>
+</header>
+
+<div id="main-grid">
+  <!-- LEFT PANEL -->
+  <div id="left-panel">
+
+    <!-- Dice Display -->
+    <div class="panel-card">
+      <div class="panel-title">骰子显示 // DICE DISPLAY</div>
+      <div id="dice-arena">
+        <div class="die-wrapper">
+          <div class="die-face" id="main-die">—</div>
+          <div class="die-label" id="main-die-label">D10</div>
+          <div class="die-extra" id="main-die-extra"></div>
+        </div>
+        <div id="extra-dice-area" style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;"></div>
+      </div>
+      <!-- Result -->
+      <div id="result-display">
+        <div id="result-total">—</div>
+        <div id="result-label">等待投掷...</div>
+        <div id="result-judgment"></div>
+        <div id="result-detail"></div>
+      </div>
+    </div>
+
+    <!-- Skill Check -->
+    <div class="panel-card" id="skill-panel">
+      <div class="panel-title">技能检定 // SKILL CHECK &nbsp;<small style="color:var(--text-dim);font-size:0.6rem;letter-spacing:0.1em">1d10 + STAT + 技能 vs DV</small></div>
+      <div class="input-row">
+        <div class="input-group">
+          <label>STAT 属性</label>
+          <input type="number" id="stat-val" min="1" max="8" value="4">
+        </div>
+        <div class="input-group">
+          <label>技能等级</label>
+          <input type="number" id="skill-val" min="0" max="10" value="0">
+        </div>
+        <div class="input-group">
+          <label>DV 难度</label>
+          <select id="dv-select">
+            <option value="9">9 — 简单</option>
+            <option value="13" selected>13 — 普通</option>
+            <option value="15">15 — 困难</option>
+            <option value="17">17 — 很难</option>
+            <option value="21">21 — 专业级</option>
+            <option value="24">24 — 英雄级</option>
+            <option value="29">29 — 传奇级</option>
+          </select>
+        </div>
+        <div class="input-group" style="justify-content:flex-end">
+          <label>&nbsp;</label>
+          <button class="btn btn-primary" id="skill-btn" onclick="doSkillCheck()">投掷检定!</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Dice -->
+    <div class="panel-card" id="quick-panel">
+      <div class="panel-title">快捷骰子 // QUICK ROLL</div>
+      <div class="btn-grid">
+        <button class="btn btn-sm btn-yellow" onclick="openInitModal()">先攻 Initiative</button>
+        <button class="btn btn-sm" onclick="quickRoll(1,10,0,'1d10')">1d10</button>
+        <button class="btn btn-sm" onclick="quickRoll(1,6,0,'1d6')">1d6</button>
+        <button class="btn btn-sm" onclick="quickRoll(2,6,0,'2d6')">2d6</button>
+        <button class="btn btn-sm" onclick="quickRoll(3,6,0,'3d6')">3d6</button>
+        <button class="btn btn-sm" onclick="quickRoll(4,6,0,'4d6')">4d6</button>
+        <button class="btn btn-sm" onclick="quickRoll(5,6,0,'5d6')">5d6</button>
+        <button class="btn btn-sm" onclick="quickRoll(2,10,0,'2d10')">2d10</button>
+      </div>
+    </div>
+
+    <!-- Damage Roll -->
+    <div class="panel-card">
+      <div class="panel-title">武器伤害 // WEAPON DAMAGE</div>
+      <div id="damage-grid">
+        <button class="btn btn-sm dmg-btn" onclick="quickRoll(1,6,0,'轻型近战')">
+          <span>1d6</span><span class="dmg-type">轻型</span>
+        </button>
+        <button class="btn btn-sm dmg-btn" onclick="quickRoll(2,6,0,'手枪/中型')">
+          <span>2d6</span><span class="dmg-type">手枪</span>
+        </button>
+        <button class="btn btn-sm dmg-btn" onclick="quickRoll(3,6,0,'步枪/重型')">
+          <span>3d6</span><span class="dmg-type">步枪</span>
+        </button>
+        <button class="btn btn-sm dmg-btn" onclick="quickRoll(4,6,0,'重武器')">
+          <span>4d6</span><span class="dmg-type">重武器</span>
+        </button>
+        <button class="btn btn-sm dmg-btn" onclick="quickRoll(5,6,0,'爆炸物')">
+          <span>5d6</span><span class="dmg-type">爆炸物</span>
+        </button>
+        <button class="btn btn-sm dmg-btn" onclick="quickRoll(1,10,0,'特殊武器')">
+          <span>1d10</span><span class="dmg-type">特殊</span>
+        </button>
+      </div>
+
+      <!-- Custom Roll -->
+      <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px;">
+        <div class="panel-title" style="margin-bottom:10px;">自定义投掷 // CUSTOM</div>
+        <div id="custom-roll-row">
+          <div class="input-group">
+            <label>骰子数</label>
+            <input type="number" id="custom-num" min="1" max="20" value="1">
+          </div>
+          <div class="sep" style="padding-top:20px">d</div>
+          <div class="input-group">
+            <label>骰子面</label>
+            <select id="custom-sides">
+              <option value="4">4</option>
+              <option value="6">6</option>
+              <option value="8">8</option>
+              <option value="10" selected>10</option>
+              <option value="12">12</option>
+              <option value="20">20</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+          <div class="sep" style="padding-top:20px">+</div>
+          <div class="input-group">
+            <label>修正值</label>
+            <input type="number" id="custom-mod" min="-20" max="20" value="0">
+          </div>
+          <div class="input-group" style="justify-content:flex-end">
+            <label>&nbsp;</label>
+            <button class="btn btn-sm btn-cyan" onclick="doCustomRoll()">投掷</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /left-panel -->
+
+  <!-- RIGHT PANEL -->
+  <div id="right-panel">
+    <div id="log-header">
+      <div id="log-title">投掷历史 // ROLL LOG</div>
+      <button class="btn btn-sm" onclick="clearLog()" style="padding:4px 10px;font-size:0.6rem;">清除 CLEAR</button>
+    </div>
+    <div id="roll-log">
+      <div id="log-empty">// 等待投掷... //</div>
+    </div>
+  </div>
+
+</div><!-- /main-grid -->
+
+<footer>
+  <span>CYBERPUNK RED DICE SIMULATOR · 赛博朋克红骰子模拟器</span>
+  <span>NIGHT CITY · <span id="footer-time"></span></span>
+</footer>
+
+<script>
+  // ── Utilities ──────────────────────────────────────────────────────────────
+
+  function rand(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  function now() {
+    return new Date().toLocaleTimeString('zh-CN', { hour12: false });
+  }
+
+  function clamp(v, min, max) {
+    return Math.max(min, Math.min(max, v));
+  }
+
+  // ── Core Dice Mechanics ────────────────────────────────────────────────────
+
+  // Exploding d10 for skill checks (Cyberpunk RED official rules)
+  // Critical Success: natural 10 → keep rolling while result is 10, add all
+  // Critical Failure: natural 1  → keep rolling while result is 1,  subtract all
+  // Returns: { roll, extra (signed chain), critical, fumble, chainRolls }
+  function rollD10Exploding() {
+    const roll = rand(1, 10);
+    const critical = (roll === 10);
+    const fumble   = (roll === 1);
+    const extra = [];       // signed bonus values to sum
+    const chainRolls = [];  // raw extra roll values for display
+
+    if (critical) {
+      let last = roll;
+      while (last === 10) {
+        const r = rand(1, 10);
+        chainRolls.push(r);
+        extra.push(r);
+        last = r;
+      }
+    } else if (fumble) {
+      let last = roll;
+      while (last === 1) {
+        const r = rand(1, 10);
+        chainRolls.push(r);
+        extra.push(-r);
+        last = r;
+      }
+    }
+
+    return { roll, extra, critical, fumble, chainRolls };
+  }
+
+  // Standard non-exploding die
+  function rollDie(sides) {
+    return rand(1, sides);
+  }
+
+  // ── Skill Check ────────────────────────────────────────────────────────────
+
+  function skillCheck(stat, skill, dv, label) {
+    const { roll, extra, critical, fumble, chainRolls } = rollD10Exploding();
+    const modifier = stat + skill;
+    const extraSum = extra.reduce((a, b) => a + b, 0);
+    const total = Math.max(1, roll + extraSum + modifier);
+    const success = total >= dv;
+
+    return {
+      type: 'skill',
+      roll, extra, chainRolls, modifier, total, dv,
+      success, critical, fumble,
+      label: label || '技能检定',
+      timestamp: now()
+    };
+  }
+
+  // ── Damage / Custom Roll ───────────────────────────────────────────────────
+
+  function rollDamage(numDice, sides, modifier, label) {
+    const rolls = Array.from({ length: numDice }, () => rollDie(sides));
+    const total = rolls.reduce((a, b) => a + b, 0) + modifier;
+    return {
+      type: 'damage',
+      rolls, sides, modifier, total,
+      label: label || `${numDice}d${sides}`,
+      timestamp: now()
+    };
+  }
+
+  // ── Initiative ─────────────────────────────────────────────────────────────
+
+  function rollInitiative(ref) {
+    const roll = rollDie(10);
+    const total = roll + ref;
+    return {
+      type: 'initiative',
+      rolls: [roll], modifier: ref, total,
+      label: '先攻',
+      timestamp: now()
+    };
+  }
+
+  // ── Animation Engine ───────────────────────────────────────────────────────
+
+  let animActive = false;
+
+  function animateDice(el, finalValue, duration, onComplete) {
+    const start = performance.now();
+    const sides = parseInt(el.dataset.sides || '10', 10);
+
+    function frame(t) {
+      const elapsed = t - start;
+      const progress = Math.min(elapsed / duration, 1);
+      // Slow down towards end
+      if (progress < 1) {
+        const interval = 40 + progress * 80;
+        el.textContent = rand(1, sides);
+        setTimeout(() => requestAnimationFrame(frame), interval);
+      } else {
+        el.textContent = finalValue;
+        if (onComplete) onComplete();
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // Multi-die animation for damage rolls
+  function animateMultiDice(diceEl, finalValues, duration, onComplete) {
+    let completed = 0;
+    const total = diceEl.length;
+    diceEl.forEach((el, i) => {
+      const delay = i * 80;
+      setTimeout(() => {
+        animateDice(el, finalValues[i], duration - delay, () => {
+          completed++;
+          if (completed === total && onComplete) onComplete();
+        });
+      }, delay);
+    });
+  }
+
+  // ── Screen Flash ───────────────────────────────────────────────────────────
+
+  function triggerFlash(type) {
+    const el = document.getElementById('screen-flash');
+    el.className = `flash-${type}`;
+    el.style.opacity = '1';
+    setTimeout(() => { el.style.opacity = '0'; }, 120);
+    setTimeout(() => { el.style.opacity = '0'; el.className = ''; }, 300);
+  }
+
+  // ── Set Result Display ─────────────────────────────────────────────────────
+
+  function setResult(result) {
+    const totalEl   = document.getElementById('result-total');
+    const labelEl   = document.getElementById('result-label');
+    const judgEl    = document.getElementById('result-judgment');
+    const detailEl  = document.getElementById('result-detail');
+
+    totalEl.className = '';
+    judgEl.className = '';
+
+    totalEl.textContent = result.total;
+    labelEl.textContent = result.label;
+
+    if (result.type === 'skill') {
+      if (result.critical && result.success) {
+        totalEl.className = 'critical';
+        judgEl.className = 'critical';
+        judgEl.textContent = '⚡ 暴击成功! CRITICAL!';
+        triggerFlash('red');
+      } else if (result.fumble) {
+        totalEl.className = 'fumble-result';
+        judgEl.className = 'fumble-result';
+        judgEl.textContent = '☠ 致命失误! FUMBLE!';
+        triggerFlash('orange');
+      } else if (result.success) {
+        totalEl.className = 'success';
+        judgEl.className = 'success';
+        judgEl.textContent = '✓ 成功 SUCCESS';
+        triggerFlash('green');
+      } else {
+        totalEl.className = 'failure';
+        judgEl.className = 'failure';
+        judgEl.textContent = '✗ 失败 FAILURE';
+      }
+
+      let chainStr = '';
+      if (result.chainRolls && result.chainRolls.length) {
+        chainStr = result.chainRolls.map((r, i) =>
+          ` ${result.critical ? '+' : '-'}${r}${result.critical && r === 10 ? '⚡' : result.fumble && r === 1 ? '☠' : ''}`
+        ).join('');
+      }
+      detailEl.textContent =
+        `骰子 ${result.roll}${chainStr} + ${result.modifier}(修正) = ${result.total}  |  DV ${result.dv}`;
+
+    } else if (result.type === 'initiative') {
+      judgEl.textContent = '';
+      detailEl.textContent = `骰子 ${result.rolls[0]} + ${result.modifier}(REF) = ${result.total}`;
+
+    } else {
+      judgEl.textContent = '';
+      const modStr = result.modifier ? ` + ${result.modifier}` : '';
+      detailEl.textContent = `[${result.rolls.join(', ')}]${modStr} = ${result.total}`;
+    }
+  }
+
+  // ── Log ────────────────────────────────────────────────────────────────────
+
+  function addToLog(result) {
+    const logEl = document.getElementById('roll-log');
+    const emptyEl = document.getElementById('log-empty');
+    if (emptyEl) emptyEl.remove();
+
+    let entryClass = 'log-entry';
+    let totalClass = 'log-total-neutral';
+    let badge = '';
+    let detail = '';
+
+    if (result.type === 'skill') {
+      if (result.critical && result.success) {
+        entryClass += ' log-critical';
+        totalClass = 'log-total-crit';
+        badge = '<span class="log-badge badge-crit">CRIT</span>';
+      } else if (result.fumble) {
+        entryClass += ' log-fumble';
+        totalClass = 'log-total-fumble';
+        badge = '<span class="log-badge badge-fumble">FUMBLE</span>';
+      } else if (result.success) {
+        entryClass += ' log-success';
+        totalClass = 'log-total-success';
+        badge = '<span class="log-badge badge-win">✓</span>';
+      } else {
+        entryClass += ' log-fail';
+        totalClass = 'log-total-fail';
+        badge = '<span class="log-badge badge-fail">✗</span>';
+      }
+      let chainStr = '';
+      if (result.chainRolls && result.chainRolls.length) {
+        chainStr = result.chainRolls.map(r =>
+          result.critical ? `+${r}` : `-${r}`
+        ).join('');
+      }
+      detail = `${result.roll}${chainStr} + ${result.modifier} = <span class="${totalClass}">${result.total}</span> (DV ${result.dv})`;
+
+    } else if (result.type === 'initiative') {
+      detail = `d10:${result.rolls[0]} + REF:${result.modifier} = <span class="log-total-neutral">${result.total}</span>`;
+
+    } else {
+      const modStr = result.modifier ? ` + ${result.modifier}` : '';
+      detail = `[${result.rolls.join(', ')}]${modStr} = <span class="log-total-neutral">${result.total}</span>`;
+    }
+
+    const entry = document.createElement('div');
+    entry.className = entryClass;
+    entry.innerHTML = `
+      <span class="log-time">[${result.timestamp}]</span>
+      <span class="log-type"> ${badge}${result.label}</span>
+      <br>${detail}
+    `;
+
+    logEl.insertBefore(entry, logEl.firstChild);
+  }
+
+  function clearLog() {
+    const logEl = document.getElementById('roll-log');
+    logEl.innerHTML = '<div id="log-empty">// 等待投掷... //</div>';
+  }
+
+  // ── Build Damage Dice Area ─────────────────────────────────────────────────
+
+  function buildDiceArea(rolls, sides) {
+    const arena = document.getElementById('extra-dice-area');
+    arena.innerHTML = '';
+    arena.style.display = rolls.length > 1 ? 'flex' : 'none';
+
+    return rolls.map((_, i) => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'die-wrapper';
+      const face = document.createElement('div');
+      face.className = 'die-face rolling';
+      face.dataset.sides = sides;
+      face.textContent = '?';
+      const lbl = document.createElement('div');
+      lbl.className = 'die-label';
+      lbl.textContent = `D${sides}`;
+      wrapper.appendChild(face);
+      wrapper.appendChild(lbl);
+      arena.appendChild(wrapper);
+      return face;
+    });
+  }
+
+  // ── Disable / Enable Buttons ───────────────────────────────────────────────
+
+  function setButtonsDisabled(disabled) {
+    document.querySelectorAll('.btn').forEach(b => {
+      if (disabled) b.setAttribute('disabled', '');
+      else b.removeAttribute('disabled');
+    });
+  }
+
+  // ── Skill Check Action ─────────────────────────────────────────────────────
+
+  function doSkillCheck() {
+    if (animActive) return;
+    animActive = true;
+    setButtonsDisabled(true);
+
+    const stat  = clamp(parseInt(document.getElementById('stat-val').value)  || 4, 1, 8);
+    const skill = clamp(parseInt(document.getElementById('skill-val').value) || 0, 0, 10);
+    const dv    = parseInt(document.getElementById('dv-select').value);
+    const result = skillCheck(stat, skill, dv, `技能检定 (STAT:${stat} 技能:${skill})`);
+
+    const mainDie   = document.getElementById('main-die');
+    const extraArea = document.getElementById('extra-dice-area');
+    mainDie.className = 'die-face rolling';
+    mainDie.dataset.sides = '10';
+    extraArea.style.display = 'none';
+    extraArea.innerHTML = '';
+
+    document.getElementById('result-total').textContent = '—';
+    document.getElementById('result-judgment').textContent = '';
+    document.getElementById('result-detail').textContent = '';
+    document.getElementById('result-label').textContent = '投掷中...';
+
+    animateDice(mainDie, result.roll, 900, () => {
+      mainDie.className = 'die-face';
+      document.getElementById('main-die-extra').textContent = '';
+
+      if (result.chainRolls && result.chainRolls.length) {
+        // Show chain dice sequentially
+        extraArea.style.display = 'flex';
+        let chainIdx = 0;
+
+        function animateNextChainDie() {
+          if (chainIdx >= result.chainRolls.length) {
+            finalizeSkill(mainDie, result);
+            return;
+          }
+          const rawVal = result.chainRolls[chainIdx];
+          const signedVal = result.critical ? rawVal : -rawVal;
+          const wrapper = document.createElement('div');
+          wrapper.className = 'die-wrapper';
+          const face = document.createElement('div');
+          face.className = 'die-face rolling';
+          face.dataset.sides = '10';
+          face.textContent = '?';
+          const lbl = document.createElement('div');
+          lbl.className = 'die-label';
+          lbl.textContent = result.critical ? `+${rawVal}` : `-${rawVal}`;
+          wrapper.appendChild(face);
+          wrapper.appendChild(lbl);
+          extraArea.appendChild(wrapper);
+          animateDice(face, rawVal, 550, () => {
+            face.className = result.critical ? 'die-face critical' : 'die-face fumble';
+            lbl.textContent = result.critical ? `+${rawVal}` : `-${rawVal}`;
+            chainIdx++;
+            animateNextChainDie();
+          });
+        }
+        animateNextChainDie();
+      } else {
+        finalizeSkill(mainDie, result);
+      }
+    });
+  }
+
+  function finalizeSkill(mainDie, result) {
+    if (result.critical && result.success) {
+      mainDie.className = 'die-face critical';
+    } else if (result.fumble) {
+      mainDie.className = 'die-face fumble';
+    } else if (result.success) {
+      mainDie.className = 'die-face success-glow';
+    } else {
+      mainDie.className = 'die-face';
+    }
+    setResult(result);
+    addToLog(result);
+    animActive = false;
+    setButtonsDisabled(false);
+  }
+
+  // ── Quick Roll (damage / custom) ───────────────────────────────────────────
+
+  function quickRoll(numDice, sides, modifier, label) {
+    if (animActive) return;
+    animActive = true;
+    setButtonsDisabled(true);
+
+    const result = rollDamage(numDice, sides, modifier, label);
+
+    document.getElementById('main-die-extra').textContent = '';
+    document.getElementById('result-total').textContent = '—';
+    document.getElementById('result-judgment').textContent = '';
+    document.getElementById('result-detail').textContent = '';
+    document.getElementById('result-label').textContent = '投掷中...';
+
+    const mainDie = document.getElementById('main-die');
+    mainDie.className = 'die-face rolling';
+    mainDie.dataset.sides = sides;
+
+    if (numDice === 1) {
+      document.getElementById('extra-dice-area').style.display = 'none';
+      document.getElementById('extra-dice-area').innerHTML = '';
+      animateDice(mainDie, result.rolls[0], 800, () => {
+        mainDie.className = 'die-face';
+        setResult(result);
+        addToLog(result);
+        animActive = false;
+        setButtonsDisabled(false);
+      });
+    } else {
+      mainDie.textContent = '?';
+      const diceEls = buildDiceArea(result.rolls, sides);
+      // first die in main slot
+      diceEls[0] && animateDice(mainDie, result.rolls[0], 800, null);
+      animateMultiDice(diceEls, result.rolls, 900, () => {
+        mainDie.className = 'die-face';
+        diceEls.forEach(el => { el.className = 'die-face'; });
+        setResult(result);
+        addToLog(result);
+        animActive = false;
+        setButtonsDisabled(false);
+      });
+    }
+  }
+
+  // ── Custom Roll ────────────────────────────────────────────────────────────
+
+  function doCustomRoll() {
+    const num   = clamp(parseInt(document.getElementById('custom-num').value)   || 1, 1, 20);
+    const sides = parseInt(document.getElementById('custom-sides').value) || 10;
+    const mod   = clamp(parseInt(document.getElementById('custom-mod').value)   || 0, -20, 20);
+    const modStr = mod !== 0 ? (mod > 0 ? `+${mod}` : `${mod}`) : '';
+    quickRoll(num, sides, mod, `${num}d${sides}${modStr}`);
+  }
+
+  // ── Initiative Modal ───────────────────────────────────────────────────────
+
+  function openInitModal() {
+    document.getElementById('init-modal').classList.add('open');
+    document.getElementById('init-ref').focus();
+  }
+
+  function closeInitModal() {
+    document.getElementById('init-modal').classList.remove('open');
+  }
+
+  function confirmInitiative() {
+    const ref = clamp(parseInt(document.getElementById('init-ref').value) || 4, 1, 8);
+    closeInitModal();
+    if (animActive) return;
+    animActive = true;
+    setButtonsDisabled(true);
+
+    const result = rollInitiative(ref);
+
+    document.getElementById('main-die-extra').textContent = '';
+    document.getElementById('result-total').textContent = '—';
+    document.getElementById('result-judgment').textContent = '';
+    document.getElementById('result-label').textContent = '投掷先攻...';
+    document.getElementById('extra-dice-area').style.display = 'none';
+    document.getElementById('extra-dice-area').innerHTML = '';
+
+    const mainDie = document.getElementById('main-die');
+    mainDie.className = 'die-face rolling';
+    mainDie.dataset.sides = '10';
+
+    animateDice(mainDie, result.rolls[0], 800, () => {
+      mainDie.className = 'die-face success-glow';
+      setResult(result);
+      addToLog(result);
+      animActive = false;
+      setButtonsDisabled(false);
+    });
+  }
+
+  // Close modal on backdrop click
+  document.getElementById('init-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeInitModal();
+  });
+
+  // Enter key in init REF field
+  document.getElementById('init-ref').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') confirmInitiative();
+    if (e.key === 'Escape') closeInitModal();
+  });
+
+  // Keyboard shortcut: Space/Enter on skill check when not in input
+  document.addEventListener('keydown', function(e) {
+    if ((e.key === ' ' || e.key === 'Enter') &&
+        document.activeElement.tagName !== 'INPUT' &&
+        document.activeElement.tagName !== 'SELECT' &&
+        document.activeElement.tagName !== 'BUTTON') {
+      e.preventDefault();
+      doSkillCheck();
+    }
+  });
+
+  // ── Footer Clock ───────────────────────────────────────────────────────────
+
+  function updateClock() {
+    document.getElementById('footer-time').textContent = new Date().toLocaleTimeString('zh-CN');
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+</script>
+</body>
+</html>
