@@ -1,0 +1,18 @@
+{
+  "name": "cyberpunk-red-dice-server",
+  "version": "1.0.0",
+  "description": "Local TRPG bridge server — Cyberpunk RED dice roller → Discord",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0"
+  }
+}

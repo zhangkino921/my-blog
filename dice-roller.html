@@ -1002,6 +1002,87 @@
       transform: translateX(-50%) translateY(0);
     }
 
+    /* ── Server / Connectivity Panel ── */
+    .conn-dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--text-dim);
+      margin-right: 6px;
+      flex-shrink: 0;
+    }
+    .conn-dot.online  { background: var(--success); box-shadow: 0 0 6px var(--success); }
+    .conn-dot.offline { background: var(--failure); }
+    .conn-dot.checking { background: var(--accent-yellow); animation: neonPulse 0.8s infinite; }
+    .server-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .server-row input[type="text"] {
+      flex: 1;
+      min-width: 180px;
+      background: var(--bg-primary);
+      border: 1px solid #2a0008;
+      color: var(--text-primary);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.78rem;
+      padding: 6px 10px;
+      outline: none;
+    }
+    .server-row input:focus { border-color: var(--accent-red-dim); }
+    .conn-status-text {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      white-space: nowrap;
+    }
+    .server-section-title {
+      font-size: 0.62rem;
+      color: var(--accent-red);
+      letter-spacing: 0.2em;
+      margin: 10px 0 6px;
+      text-transform: uppercase;
+    }
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 0.72rem;
+    }
+    .toggle-row input[type="checkbox"] { accent-color: var(--accent-red); width: 14px; height: 14px; cursor: pointer; }
+    .toggle-row label { cursor: pointer; color: var(--text-primary); }
+    .session-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+    .session-row input[type="text"] {
+      flex: 1;
+      min-width: 120px;
+      background: var(--bg-primary);
+      border: 1px solid #2a0008;
+      color: var(--text-primary);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.78rem;
+      padding: 6px 10px;
+      outline: none;
+    }
+    #session-status {
+      font-size: 0.65rem;
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      font-family: 'Share Tech Mono', monospace;
+    }
+    #session-status.active { border-color: var(--success); color: var(--success); }
+
     /* ── Responsive ── */
     @media (max-width: 900px) {
       #main-grid, #char-grid { grid-template-columns: 1fr; }
@@ -1211,6 +1292,53 @@
       </div>
     </div>
 
+    <!-- Server Integration Panel -->
+    <div class="panel-card" id="server-panel">
+      <div class="panel-title">
+        联机推送 // SERVER
+        <span style="float:right;display:flex;align-items:center;gap:4px;">
+          <span class="conn-dot" id="conn-dot"></span>
+          <span class="conn-status-text" id="conn-status-text">未连接</span>
+        </span>
+      </div>
+
+      <!-- Server URL + ping -->
+      <div class="server-section-title">服务器地址</div>
+      <div class="server-row">
+        <input type="text" id="srv-url" placeholder="http://localhost:3000" value="http://localhost:3000">
+        <input type="text" id="srv-player" placeholder="玩家代号" style="max-width:120px">
+        <button class="btn btn-sm" onclick="pingServer()">测试连接</button>
+      </div>
+
+      <!-- Session controls -->
+      <div class="server-section-title">Session 管理</div>
+      <div class="session-row">
+        <input type="text" id="session-name" placeholder="Session 名称（可选）">
+        <button class="btn btn-sm btn-yellow" onclick="startSession()">开始 Session</button>
+        <button class="btn btn-sm" onclick="endSession()">结束</button>
+        <div id="session-status">无 Session</div>
+      </div>
+
+      <!-- Auto-send toggles -->
+      <div class="server-section-title">自动推送</div>
+      <div class="toggle-row">
+        <input type="checkbox" id="toggle-rolls" checked>
+        <label for="toggle-rolls">自动推送骰点结果到 Discord</label>
+      </div>
+      <div class="toggle-row">
+        <input type="checkbox" id="toggle-char">
+        <label for="toggle-char">切换出战角色时自动推送角色卡</label>
+      </div>
+
+      <!-- Export -->
+      <div class="server-section-title">导出数据包</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-sm btn-cyan" onclick="exportJson()">下载 JSON</button>
+        <button class="btn btn-sm btn-cyan" onclick="exportMarkdown()">下载 Markdown</button>
+        <button class="btn btn-sm" onclick="copyToClipboard()">复制纯文本到剪贴板</button>
+      </div>
+    </div>
+
   </div><!-- /left-panel -->
 
   <!-- RIGHT PANEL -->
@@ -1320,6 +1448,7 @@
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           <button class="btn btn-primary" onclick="saveCharacter()">保存角色 SAVE</button>
           <button class="btn btn-yellow" onclick="setActiveAndGo()">设为出战 → 投骰</button>
+          <button class="btn btn-sm btn-cyan" onclick="pushCharacterNow()">推送角色卡到 Discord</button>
           <button class="btn btn-sm" onclick="newCharacter()">新建空白 NEW</button>
         </div>
       </div>
@@ -2336,6 +2465,253 @@
     flashTimeout = setTimeout(() => el.classList.remove('show'), 1800);
   }
 
+  // ══════════════════════════════════════════════════════════════════════════
+  // ── SERVER INTEGRATION ────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
+
+  const SRV_LS_KEY = 'cyberpunk_red_server_url';
+  const PLR_LS_KEY = 'cyberpunk_red_player_name';
+  let serverOnline    = false;
+  let pingIntervalId  = null;
+
+  function getServerUrl() {
+    return (document.getElementById('srv-url')?.value ?? '').replace(/\/$/, '')
+      || localStorage.getItem(SRV_LS_KEY)
+      || 'http://localhost:3000';
+  }
+
+  function getPlayerName() {
+    return (document.getElementById('srv-player')?.value ?? '').trim()
+      || localStorage.getItem(PLR_LS_KEY)
+      || '玩家';
+  }
+
+  function setConnStatus(state, label) {
+    const dot  = document.getElementById('conn-dot');
+    const text = document.getElementById('conn-status-text');
+    if (!dot || !text) return;
+    dot.className  = 'conn-dot ' + state;   // online | offline | checking
+    text.textContent = label;
+    serverOnline   = (state === 'online');
+  }
+
+  async function pingServer() {
+    const url = getServerUrl();
+    localStorage.setItem(SRV_LS_KEY, url);
+    localStorage.setItem(PLR_LS_KEY, getPlayerName());
+    setConnStatus('checking', '连接中...');
+    try {
+      const res = await fetch(`${url}/api/ping`, { signal: AbortSignal.timeout(3000) });
+      if (!res.ok) throw new Error(res.status);
+      const data = await res.json();
+      const sessionLabel = data.sessionActive
+        ? ` · Session: ${data.sessionName}`
+        : '';
+      setConnStatus('online', `在线${sessionLabel}`);
+      if (data.sessionActive) {
+        document.getElementById('session-status').textContent = data.sessionName;
+        document.getElementById('session-status').classList.add('active');
+      }
+    } catch (e) {
+      setConnStatus('offline', '离线 — 服务器未启动');
+    }
+  }
+
+  // Auto-ping every 15s
+  function startPingLoop() {
+    pingServer();
+    pingIntervalId = setInterval(pingServer, 15000);
+  }
+
+  // ── Session Management ──
+
+  async function startSession() {
+    if (!serverOnline) { flashMessage('服务器未连接'); return; }
+    const name = document.getElementById('session-name').value.trim();
+    try {
+      const res  = await fetch(`${getServerUrl()}/api/session/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      const el = document.getElementById('session-status');
+      el.textContent = data.session?.name ?? 'Session 进行中';
+      el.classList.add('active');
+      flashMessage(`✓ Session 已开始: ${data.session?.name}`);
+    } catch (e) {
+      flashMessage('无法开始 Session: ' + e.message);
+    }
+  }
+
+  async function endSession() {
+    if (!serverOnline) { flashMessage('服务器未连接'); return; }
+    try {
+      await fetch(`${getServerUrl()}/api/session/end`, { method: 'POST' });
+      const el = document.getElementById('session-status');
+      el.textContent = '无 Session';
+      el.classList.remove('active');
+      flashMessage('Session 已结束，数据已保存');
+    } catch (e) {
+      flashMessage('无法结束 Session: ' + e.message);
+    }
+  }
+
+  // ── Send Roll to Server ──
+
+  async function sendRollToServer(result) {
+    const autoSend = document.getElementById('toggle-rolls')?.checked;
+    if (!autoSend || !serverOnline) return;
+    const active = getActiveCharacter();
+    const payload = {
+      ...result,
+      player:    getPlayerName(),
+      character: active?.handle ?? '',
+      role:      active?.role   ?? '',
+    };
+    try {
+      await fetch(`${getServerUrl()}/api/roll`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+        signal:  AbortSignal.timeout(5000),
+      });
+    } catch (e) {
+      console.warn('[server] send roll failed:', e.message);
+    }
+  }
+
+  // ── Send Character to Server ──
+
+  async function sendCharacterToServer(char) {
+    if (!serverOnline) return;
+    try {
+      await fetch(`${getServerUrl()}/api/character`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(char),
+        signal:  AbortSignal.timeout(5000),
+      });
+    } catch (e) {
+      console.warn('[server] send character failed:', e.message);
+    }
+  }
+
+  async function pushCharacterNow() {
+    if (!editingChar) { flashMessage('无角色数据'); return; }
+    if (!serverOnline) { flashMessage('服务器未连接，先在联机面板测试连接'); return; }
+    syncFormToEditing();
+    await sendCharacterToServer(editingChar);
+    flashMessage(`✓ 已推送 ${editingChar.handle} 到 Discord`);
+  }
+
+  // ── Export / Clipboard ──
+
+  function exportJson() {
+    const url = `${getServerUrl()}/api/export/json`;
+    if (serverOnline) { window.open(url, '_blank'); return; }
+    // Fallback: export localStorage data
+    const data = {
+      exportedAt: new Date().toISOString(),
+      characters: characters,
+      note: '（服务器离线，仅包含本地角色数据，无 Session 投掷记录）',
+    };
+    downloadBlob(JSON.stringify(data, null, 2), 'cyberpunk-red-export.json', 'application/json');
+  }
+
+  function exportMarkdown() {
+    if (serverOnline) {
+      window.open(`${getServerUrl()}/api/export/markdown`, '_blank');
+      return;
+    }
+    // Fallback: generate markdown from characters only
+    const lines = ['# Cyberpunk RED Export', '', '## 角色'];
+    characters.forEach(c => {
+      const s = c.stats;
+      const hp = 10 + 5 * Math.floor(((s?.BODY ?? 4) + (s?.WILL ?? 4)) / 2);
+      lines.push(`- **${c.handle}** (${c.role || '?'}) HP:${hp}`);
+      if (c.notes) lines.push(`  > ${c.notes}`);
+    });
+    downloadBlob(lines.join('\n'), 'cyberpunk-red-export.md', 'text/markdown');
+  }
+
+  async function copyToClipboard() {
+    let text = '';
+    if (serverOnline) {
+      try {
+        const res = await fetch(`${getServerUrl()}/api/session`);
+        const s   = await res.json();
+        text = `=== ${s.name || 'Cyberpunk RED'} ===\n`;
+        text += `Session: ${s.active ? '进行中' : '已结束'} · 投掷 ${s.rollCount} 次\n`;
+        text += `角色: ${(s.characters || []).join(', ')}`;
+      } catch (e) {
+        text = '（获取 Session 数据失败）';
+      }
+    } else {
+      text = characters.map(c => {
+        const s = c.stats;
+        const hp = 10 + 5 * Math.floor(((s?.BODY ?? 4) + (s?.WILL ?? 4)) / 2);
+        return `【${c.handle}】${c.role || '?'} HP:${hp}`;
+      }).join('\n') || '（无角色数据）';
+    }
+    await navigator.clipboard.writeText(text).catch(() => {});
+    flashMessage('✓ 已复制到剪贴板');
+  }
+
+  function downloadBlob(content, filename, type) {
+    const blob = new Blob([content], { type });
+    const a = Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(blob),
+      download: filename,
+    });
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  // ── Patch roll finalization to fire server send ──
+
+  const _origFinalizeSkill = finalizeSkill;
+  finalizeSkill = function(mainDie, result) {
+    _origFinalizeSkill(mainDie, result);
+    sendRollToServer(result);
+  };
+
+  const _origQuickRollFinalize = function(result) {
+    sendRollToServer(result);
+  };
+
+  // Patch quickRoll / initiative to also send
+  const _origSetResult = setResult;
+  setResult = function(result) {
+    _origSetResult(result);
+    if (result.type !== 'skill') sendRollToServer(result);
+  };
+
+  // Patch setActiveAndGo to optionally push character
+  const _origSetActiveAndGo = setActiveAndGo;
+  setActiveAndGo = function() {
+    _origSetActiveAndGo();
+    const autoChar = document.getElementById('toggle-char')?.checked;
+    if (autoChar && serverOnline && editingChar) {
+      sendCharacterToServer(editingChar);
+    }
+  };
+
+  // ── Initialize Server Panel ──
+
+  function initServerPanel() {
+    const urlInput = document.getElementById('srv-url');
+    const plrInput = document.getElementById('srv-player');
+    if (urlInput) urlInput.value = localStorage.getItem(SRV_LS_KEY) || 'http://localhost:3000';
+    if (plrInput) plrInput.value = localStorage.getItem(PLR_LS_KEY) || '';
+    // Save on change
+    urlInput?.addEventListener('blur', () =>
+      localStorage.setItem(SRV_LS_KEY, urlInput.value));
+    plrInput?.addEventListener('blur', () =>
+      localStorage.setItem(PLR_LS_KEY, plrInput.value));
+    startPingLoop();
+  }
+
   // ── Initialize Character System ──
 
   function initCharacterSystem() {
@@ -2372,6 +2748,8 @@
     loadCharactersFromStorage();
     renderCharacterList();
     renderActiveCharBanner();
+    // Init server panel
+    initServerPanel();
   }
 
   initCharacterSystem();
