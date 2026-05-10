@@ -566,14 +566,454 @@
     .modal-box .input-group input { width: 100%; }
     .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
 
+    /* ── Tab Navigation ── */
+    #tab-nav {
+      display: flex;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      position: relative;
+    }
+    .tab {
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 12px 22px;
+      color: var(--text-dim);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+    }
+    .tab:hover { color: var(--text-primary); }
+    .tab.active {
+      color: var(--accent-red);
+      border-bottom-color: var(--accent-red);
+      text-shadow: 0 0 10px var(--accent-red-glow);
+    }
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── Active Character Banner ── */
+    #active-char-banner {
+      background: linear-gradient(90deg, rgba(255,204,0,0.06) 0%, transparent 100%);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent-yellow);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      font-size: 0.7rem;
+    }
+    #active-char-banner.hidden { display: none; }
+    .banner-id {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 140px;
+    }
+    .banner-handle {
+      font-family: 'Orbitron', sans-serif;
+      color: var(--accent-yellow);
+      font-weight: 900;
+      letter-spacing: 0.15em;
+      font-size: 0.95rem;
+    }
+    .banner-role { color: var(--text-dim); font-size: 0.65rem; letter-spacing: 0.1em; }
+    .banner-vitals {
+      display: flex;
+      gap: 14px;
+      padding: 0 14px;
+      border-left: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+    }
+    .banner-vital { display: flex; flex-direction: column; gap: 2px; }
+    .banner-vital-label {
+      font-size: 0.55rem;
+      color: var(--text-dim);
+      letter-spacing: 0.15em;
+    }
+    .banner-vital-value {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+    }
+    .banner-stats {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      flex: 1;
+      justify-content: flex-end;
+    }
+    .banner-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      padding: 3px 7px;
+      border: 1px solid #222;
+      transition: all 0.15s;
+      background: var(--bg-panel);
+      min-width: 38px;
+    }
+    .banner-stat:hover {
+      border-color: var(--accent-red);
+      background: rgba(255,0,51,0.05);
+    }
+    .banner-stat-label {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.55rem;
+      color: var(--accent-red);
+      letter-spacing: 0.1em;
+    }
+    .banner-stat-value {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 900;
+      color: var(--accent-yellow);
+    }
+    .banner-skill-row {
+      width: 100%;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding-top: 8px;
+      margin-top: 4px;
+      border-top: 1px dashed var(--border);
+    }
+    .banner-skill-row label {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 0.15em;
+    }
+    .banner-skill-select {
+      background: var(--bg-primary);
+      border: 1px solid #333;
+      color: var(--text-primary);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.7rem;
+      padding: 4px 8px;
+      flex: 1;
+      max-width: 320px;
+      cursor: pointer;
+      outline: none;
+    }
+    .banner-skill-select:focus { border-color: var(--accent-red-dim); }
+
+    /* ── Character View Grid ── */
+    #char-grid {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 0;
+      min-height: calc(100vh - 110px);
+    }
+    #char-left {
+      padding: 24px;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    #char-right {
+      padding: 20px;
+      background: var(--bg-secondary);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Character Identity */
+    .char-identity-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+    }
+    .char-text-input, .char-select {
+      background: var(--bg-primary);
+      border: 1px solid #2a0008;
+      color: var(--text-primary);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+      padding: 7px 10px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      width: 100%;
+    }
+    .char-text-input:focus, .char-select:focus {
+      border-color: var(--accent-red-dim);
+      box-shadow: 0 0 8px rgba(255,0,51,0.3);
+    }
+    .role-display {
+      background: var(--bg-panel2);
+      border: 1px solid var(--border);
+      border-left: 2px solid var(--accent-cyan);
+      padding: 10px 14px;
+      font-size: 0.72rem;
+      color: var(--text-primary);
+      margin-top: 12px;
+      line-height: 1.7;
+    }
+    .role-name {
+      color: var(--accent-yellow);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.85rem;
+      letter-spacing: 0.15em;
+      font-weight: 700;
+    }
+    .role-desc { color: var(--text-dim); font-size: 0.7rem; margin-top: 4px; }
+    .role-ability { color: var(--accent-cyan); margin-top: 6px; font-size: 0.72rem; }
+
+    /* Stats Grid */
+    .stats-method-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .points-budget {
+      margin-left: auto;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+    }
+    .points-budget .num {
+      color: var(--accent-yellow);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 900;
+    }
+    .points-budget.over .num { color: var(--failure); }
+    #stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    .stat-item {
+      background: var(--bg-panel2);
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .stat-name { flex: 1; display: flex; flex-direction: column; }
+    .stat-en {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.72rem;
+      color: var(--accent-red);
+      letter-spacing: 0.15em;
+      font-weight: 700;
+    }
+    .stat-cn { font-size: 0.6rem; color: var(--text-dim); }
+    .stat-controls { display: flex; align-items: center; gap: 6px; }
+    .stat-btn {
+      background: var(--bg-primary);
+      border: 1px solid #333;
+      color: var(--text-primary);
+      width: 24px;
+      height: 24px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Share Tech Mono', monospace;
+      transition: all 0.15s;
+    }
+    .stat-btn:hover { border-color: var(--accent-red); color: var(--accent-red); }
+    .stat-value {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 900;
+      color: var(--accent-yellow);
+      min-width: 26px;
+      text-align: center;
+    }
+
+    /* Derived Stats */
+    #derived-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .derived-item {
+      background: var(--bg-panel2);
+      border: 1px solid var(--border);
+      border-left: 2px solid var(--accent-cyan);
+      padding: 8px 12px;
+    }
+    .derived-label {
+      font-size: 0.55rem;
+      color: var(--text-dim);
+      letter-spacing: 0.15em;
+    }
+    .derived-value {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 900;
+      color: var(--accent-cyan);
+      margin-top: 2px;
+    }
+
+    /* Skills */
+    #skills-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 6px;
+    }
+    .skill-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-panel2);
+      border: 1px solid var(--border);
+      padding: 5px 9px;
+      font-size: 0.7rem;
+    }
+    .skill-name { flex: 1; color: var(--text-primary); }
+    .skill-name small {
+      color: var(--accent-red);
+      margin-left: 4px;
+      font-size: 0.55rem;
+      letter-spacing: 0.1em;
+      font-family: 'Orbitron', sans-serif;
+    }
+    .skill-input {
+      background: var(--bg-primary);
+      border: 1px solid #2a0008;
+      color: var(--accent-yellow);
+      width: 38px;
+      text-align: center;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+      padding: 2px;
+      outline: none;
+    }
+    .skill-input:focus { border-color: var(--accent-red); }
+    .skill-category {
+      grid-column: 1 / -1;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.65rem;
+      color: var(--accent-red);
+      letter-spacing: 0.2em;
+      margin: 8px 0 4px;
+      border-top: 1px solid var(--border);
+      padding-top: 8px;
+    }
+    .skill-category:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+
+    /* Notes textarea */
+    .char-textarea {
+      background: var(--bg-primary);
+      border: 1px solid #2a0008;
+      color: var(--text-primary);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.78rem;
+      padding: 10px 12px;
+      width: 100%;
+      min-height: 70px;
+      resize: vertical;
+      outline: none;
+    }
+    .char-textarea:focus {
+      border-color: var(--accent-red-dim);
+      box-shadow: 0 0 8px rgba(255,0,51,0.3);
+    }
+
+    /* Character List */
+    .char-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-left: 2px solid #333;
+      padding: 10px 12px;
+      transition: all 0.15s;
+      margin-bottom: 8px;
+    }
+    .char-card:hover { border-left-color: var(--accent-red-dim); }
+    .char-card.active {
+      border-left-color: var(--accent-yellow);
+      box-shadow: inset 0 0 24px rgba(255,204,0,0.04);
+    }
+    .char-card-handle {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.85rem;
+      color: var(--accent-yellow);
+      font-weight: 700;
+      letter-spacing: 0.1em;
+    }
+    .char-card-role {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      margin-top: 2px;
+    }
+    .char-card-stats {
+      font-size: 0.62rem;
+      color: var(--accent-cyan);
+      margin-top: 6px;
+      font-family: 'Share Tech Mono', monospace;
+    }
+    .char-card-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .char-card-actions .btn {
+      font-size: 0.55rem;
+      padding: 3px 8px;
+      letter-spacing: 0.1em;
+    }
+    #char-list-empty {
+      text-align: center;
+      color: var(--text-dim);
+      padding: 40px 20px;
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+    }
+
+    /* Flash message */
+    #flash-msg {
+      position: fixed;
+      bottom: 50px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--bg-panel);
+      border: 1px solid var(--accent-yellow);
+      color: var(--accent-yellow);
+      padding: 8px 18px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      z-index: 10001;
+      box-shadow: 0 0 16px rgba(255,204,0,0.3);
+      opacity: 0;
+      transition: all 0.25s;
+      pointer-events: none;
+    }
+    #flash-msg.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
     /* ── Responsive ── */
     @media (max-width: 900px) {
-      #main-grid { grid-template-columns: 1fr; }
-      #right-panel {
+      #main-grid, #char-grid { grid-template-columns: 1fr; }
+      #right-panel, #char-right {
         border-top: 1px solid var(--border);
         max-height: 420px;
       }
       footer { grid-column: 1; }
+      .char-identity-row { grid-template-columns: 1fr; }
+      #stats-grid { grid-template-columns: 1fr; }
+      #derived-grid { grid-template-columns: repeat(2, 1fr); }
+      .banner-stats { justify-content: flex-start; }
     }
     @media (max-width: 600px) {
       header { padding: 14px 16px; }
@@ -609,12 +1049,43 @@
     <div class="header-title">NETRUNNER DICE <span>//</span> 骰子模拟器</div>
     <div class="header-sub">CYBERPUNK RED SYSTEM · 赛博朋克红系统</div>
   </div>
-  <div class="header-badge">v1.0 // NIGHT CITY</div>
+  <div class="header-badge">v1.1 // NIGHT CITY</div>
 </header>
 
+<nav id="tab-nav">
+  <button class="tab active" data-view="dice">骰子模拟器 // DICE</button>
+  <button class="tab" data-view="character">人物卡 // CHARACTER</button>
+</nav>
+
+<div id="view-dice" class="view active">
 <div id="main-grid">
   <!-- LEFT PANEL -->
   <div id="left-panel">
+
+    <!-- Active Character Banner -->
+    <div id="active-char-banner" class="hidden">
+      <div class="banner-id">
+        <div class="banner-handle" id="banner-handle">—</div>
+        <div class="banner-role" id="banner-role">—</div>
+      </div>
+      <div class="banner-vitals">
+        <div class="banner-vital">
+          <span class="banner-vital-label">HP</span>
+          <span class="banner-vital-value" id="banner-hp">—</span>
+        </div>
+        <div class="banner-vital">
+          <span class="banner-vital-label">人性</span>
+          <span class="banner-vital-value" id="banner-hmn">—</span>
+        </div>
+      </div>
+      <div class="banner-stats" id="banner-stats"></div>
+      <div class="banner-skill-row">
+        <label>快速技能填入:</label>
+        <select class="banner-skill-select" id="banner-skill-select" onchange="useSkillForRoll(this.value)">
+          <option value="">-- 选择技能 --</option>
+        </select>
+      </div>
+    </div>
 
     <!-- Dice Display -->
     <div class="panel-card">
@@ -754,6 +1225,120 @@
   </div>
 
 </div><!-- /main-grid -->
+</div><!-- /view-dice -->
+
+<!-- ═══════════════ CHARACTER VIEW ═══════════════ -->
+<div id="view-character" class="view">
+  <div id="char-grid">
+
+    <!-- LEFT: Character Sheet Form -->
+    <div id="char-left">
+
+      <!-- Identity -->
+      <div class="panel-card">
+        <div class="panel-title">人物身份 // IDENTITY</div>
+        <div class="char-identity-row">
+          <div class="input-group">
+            <label>代号 HANDLE *</label>
+            <input type="text" class="char-text-input" id="char-handle" placeholder="V / Johnny / ...">
+          </div>
+          <div class="input-group">
+            <label>本名 NAME</label>
+            <input type="text" class="char-text-input" id="char-realname" placeholder="(可选)">
+          </div>
+          <div class="input-group">
+            <label>职业 ROLE</label>
+            <select class="char-select" id="char-role">
+              <option value="">-- 选择职业 --</option>
+            </select>
+          </div>
+        </div>
+        <div class="role-display" id="role-display" style="display:none;">
+          <div class="role-name" id="role-name"></div>
+          <div class="role-desc" id="role-desc"></div>
+          <div class="role-ability" id="role-ability"></div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="panel-card">
+        <div class="panel-title">基础属性 // STATS &nbsp;<small style="color:var(--text-dim);font-size:0.6rem;letter-spacing:0.1em">每项 1-8</small></div>
+        <div class="stats-method-row">
+          <button class="btn btn-sm btn-yellow" onclick="applyStatMethod('pointbuy')">点数购买基础</button>
+          <button class="btn btn-sm btn-cyan" onclick="applyStatMethod('classic')">经典阵列</button>
+          <button class="btn btn-sm" onclick="applyStatMethod('random')">随机生成</button>
+          <div class="points-budget" id="points-budget">已用: <span class="num">40</span> · 推荐预算 <span class="num">62</span></div>
+        </div>
+        <div id="stats-grid"></div>
+      </div>
+
+      <!-- Derived Stats -->
+      <div class="panel-card">
+        <div class="panel-title">衍生数值 // DERIVED &nbsp;<small style="color:var(--text-dim);font-size:0.6rem;letter-spacing:0.1em">自动计算</small></div>
+        <div id="derived-grid">
+          <div class="derived-item">
+            <div class="derived-label">HP 生命值</div>
+            <div class="derived-value" id="d-hp">10</div>
+          </div>
+          <div class="derived-item">
+            <div class="derived-label">人性值 HUMANITY</div>
+            <div class="derived-value" id="d-humanity">40</div>
+          </div>
+          <div class="derived-item">
+            <div class="derived-label">死亡豁免 DEATH SAVE</div>
+            <div class="derived-value" id="d-death">4</div>
+          </div>
+          <div class="derived-item">
+            <div class="derived-label">步行 WALK</div>
+            <div class="derived-value" id="d-walk">8m</div>
+          </div>
+          <div class="derived-item">
+            <div class="derived-label">奔跑 RUN</div>
+            <div class="derived-value" id="d-run">16m</div>
+          </div>
+          <div class="derived-item">
+            <div class="derived-label">伤口阈值 WOUND</div>
+            <div class="derived-value" id="d-wound">5</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Skills -->
+      <div class="panel-card">
+        <div class="panel-title">技能 // SKILLS &nbsp;<small style="color:var(--text-dim);font-size:0.6rem;letter-spacing:0.1em">每项 0-10</small></div>
+        <div id="skills-grid"></div>
+      </div>
+
+      <!-- Notes -->
+      <div class="panel-card">
+        <div class="panel-title">背景与笔记 // NOTES</div>
+        <textarea class="char-textarea" id="char-notes" placeholder="人物背景、装备、欠债、终生目标..."></textarea>
+      </div>
+
+      <!-- Actions -->
+      <div class="panel-card">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="saveCharacter()">保存角色 SAVE</button>
+          <button class="btn btn-yellow" onclick="setActiveAndGo()">设为出战 → 投骰</button>
+          <button class="btn btn-sm" onclick="newCharacter()">新建空白 NEW</button>
+        </div>
+      </div>
+
+    </div><!-- /char-left -->
+
+    <!-- RIGHT: Roster -->
+    <div id="char-right">
+      <div id="log-header">
+        <div id="log-title">角色名册 // ROSTER</div>
+        <span style="color:var(--text-dim);font-size:0.6rem;letter-spacing:0.15em" id="char-count">0 角色</span>
+      </div>
+      <div id="char-list" style="flex:1;overflow-y:auto;padding-right:4px;"></div>
+    </div>
+
+  </div><!-- /char-grid -->
+</div><!-- /view-character -->
+
+<div id="flash-msg"></div>
 
 <footer>
   <span>CYBERPUNK RED DICE SIMULATOR · 赛博朋克红骰子模拟器</span>
@@ -1264,6 +1849,532 @@
   }
   updateClock();
   setInterval(updateClock, 1000);
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ── CHARACTER SYSTEM ──────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
+
+  const ROLES = {
+    rockerboy: { cn: '摇滚客', en: 'Rockerboy', ability: 'Charismatic Impact 魅力影响',
+      desc: '艺术家与煽动者。通过表演和言论影响人群，挑战公司制度。' },
+    solo:      { cn: '孤狼',   en: 'Solo',      ability: 'Combat Awareness 战斗感知',
+      desc: '雇佣兵、保镖、暗杀者。专精战斗，可强化命中、伤害或防御。' },
+    netrunner: { cn: '网络奇侠', en: 'Netrunner', ability: 'Interface 接口',
+      desc: '潜入网络架构的黑客。操纵程序，攻入企业冰墙。' },
+    tech:      { cn: '技术专家', en: 'Tech',     ability: 'Maker 制造者',
+      desc: '工程师与改装师。打造、改造、修复任何机械与电子设备。' },
+    medtech:   { cn: '医疗专家', en: 'Medtech',  ability: 'Medicine 医学',
+      desc: '街头医生。稳定伤员、治疗创伤、植入或拆除义体。' },
+    media:     { cn: '媒体人', en: 'Media',     ability: 'Credibility 公信力',
+      desc: '记者、博主、主播。调查报道，揭露黑幕，唤起公众关注。' },
+    lawman:    { cn: '执法者', en: 'Lawman',    ability: 'Backup 后援',
+      desc: '警察、警长或赏金猎人。依靠组织调遣援军与情报。' },
+    exec:      { cn: '公司经理', en: 'Exec',     ability: 'Teamwork 团队协作',
+      desc: '企业玩家。统御下属，调配公司资源，攀爬权力金字塔。' },
+    fixer:     { cn: '掮客',   en: 'Fixer',     ability: 'Operator 中介',
+      desc: '资源中介。游走灰区，撮合交易，提供任何能买到的东西。' },
+    nomad:     { cn: '浪人',   en: 'Nomad',     ability: 'Moto 载具',
+      desc: '游牧家族成员。调遣家族车辆与资源，纵横荒野与公路。' }
+  };
+
+  const STATS_DEF = [
+    { key: 'INT',  cn: '智力'   },
+    { key: 'REF',  cn: '反应'   },
+    { key: 'DEX',  cn: '灵巧'   },
+    { key: 'TECH', cn: '技术'   },
+    { key: 'COOL', cn: '冷静'   },
+    { key: 'WILL', cn: '意志'   },
+    { key: 'LUCK', cn: '运气'   },
+    { key: 'MOVE', cn: '移动'   },
+    { key: 'BODY', cn: '体魄'   },
+    { key: 'EMP',  cn: '同感'   }
+  ];
+
+  const SKILLS_DEF = {
+    '通用 AWARENESS': [
+      { key: 'concentration',     cn: '集中',         stat: 'WILL' },
+      { key: 'conceal-reveal',    cn: '隐匿/搜寻',    stat: 'INT'  },
+      { key: 'perception',        cn: '感知',         stat: 'INT'  },
+      { key: 'tracking',          cn: '追踪',         stat: 'INT'  }
+    ],
+    '体能 BODY': [
+      { key: 'athletics',         cn: '运动',         stat: 'DEX'  },
+      { key: 'brawling',          cn: '拳搏',         stat: 'DEX'  },
+      { key: 'endurance',         cn: '耐力',         stat: 'WILL' },
+      { key: 'evasion',           cn: '闪避',         stat: 'DEX'  },
+      { key: 'martial-arts',      cn: '武术',         stat: 'DEX'  }
+    ],
+    '武器 COMBAT': [
+      { key: 'archery',           cn: '弓术',         stat: 'REF'  },
+      { key: 'autofire',          cn: '全自动',       stat: 'REF'  },
+      { key: 'handgun',           cn: '手枪',         stat: 'REF'  },
+      { key: 'heavy-weapons',     cn: '重武器',       stat: 'REF'  },
+      { key: 'melee',             cn: '近战武器',     stat: 'DEX'  },
+      { key: 'shoulder-arms',     cn: '长枪',         stat: 'REF'  }
+    ],
+    '驾驶 DRIVING': [
+      { key: 'drive-land',        cn: '陆地驾驶',     stat: 'REF'  },
+      { key: 'pilot-air',         cn: '飞行驾驶',     stat: 'REF'  }
+    ],
+    '社交 SOCIAL': [
+      { key: 'persuasion',        cn: '说服',         stat: 'COOL' },
+      { key: 'human-perception',  cn: '识人',         stat: 'EMP'  },
+      { key: 'streetwise',        cn: '街头智慧',     stat: 'COOL' },
+      { key: 'interrogation',     cn: '审讯',         stat: 'COOL' }
+    ],
+    '技术 TECHNIQUE': [
+      { key: 'basic-tech',        cn: '基础技术',     stat: 'TECH' },
+      { key: 'cybertech',         cn: '义体技术',     stat: 'TECH' },
+      { key: 'electronics',       cn: '电子',         stat: 'TECH' },
+      { key: 'first-aid',         cn: '急救',         stat: 'TECH' },
+      { key: 'hacking',           cn: '黑客',         stat: 'TECH' },
+      { key: 'stealth',           cn: '潜行',         stat: 'DEX'  }
+    ]
+  };
+
+  const STORAGE_KEY    = 'cyberpunk_red_characters';
+  const STORAGE_ACTIVE = 'cyberpunk_red_active_char';
+
+  let characters  = [];
+  let activeCharId = null;
+  let editingChar  = null;
+
+  // ── Persistence ──
+
+  function loadCharactersFromStorage() {
+    try {
+      const data = localStorage.getItem(STORAGE_KEY);
+      characters = data ? JSON.parse(data) : [];
+      activeCharId = localStorage.getItem(STORAGE_ACTIVE) || null;
+    } catch (e) {
+      characters = [];
+      activeCharId = null;
+    }
+  }
+
+  function saveCharactersToStorage() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(characters));
+      if (activeCharId) localStorage.setItem(STORAGE_ACTIVE, activeCharId);
+      else localStorage.removeItem(STORAGE_ACTIVE);
+    } catch (e) {
+      flashMessage('保存失败: ' + e.message);
+    }
+  }
+
+  // ── Character Factory ──
+
+  function emptyCharacter() {
+    const stats = {};
+    STATS_DEF.forEach(s => stats[s.key] = 4);
+    const skills = {};
+    Object.values(SKILLS_DEF).flat().forEach(sk => skills[sk.key] = 0);
+    return {
+      id: 'char_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+      handle: '', realName: '', role: '',
+      stats, skills, notes: '',
+      createdAt: Date.now()
+    };
+  }
+
+  function newCharacter() {
+    editingChar = emptyCharacter();
+    renderCharacterForm();
+    flashMessage('已新建空白角色');
+  }
+
+  function loadCharacterIntoForm(id) {
+    const c = characters.find(c => c.id === id);
+    if (!c) return;
+    editingChar = JSON.parse(JSON.stringify(c));
+    // backfill new skills if older characters miss them
+    Object.values(SKILLS_DEF).flat().forEach(sk => {
+      if (!(sk.key in editingChar.skills)) editingChar.skills[sk.key] = 0;
+    });
+    renderCharacterForm();
+  }
+
+  function saveCharacter() {
+    if (!editingChar) return;
+    syncFormToEditing();
+    if (!editingChar.handle.trim()) {
+      flashMessage('⚠ 请填写代号 HANDLE');
+      document.getElementById('char-handle').focus();
+      return;
+    }
+    const idx = characters.findIndex(c => c.id === editingChar.id);
+    if (idx >= 0) characters[idx] = editingChar;
+    else characters.push(editingChar);
+    saveCharactersToStorage();
+    renderCharacterList();
+    renderActiveCharBanner();
+    flashMessage('✓ 角色已保存');
+  }
+
+  function deleteCharacter(id) {
+    if (!confirm('确认删除该角色？此操作不可撤销。')) return;
+    characters = characters.filter(c => c.id !== id);
+    if (activeCharId === id) activeCharId = null;
+    if (editingChar && editingChar.id === id) editingChar = emptyCharacter();
+    saveCharactersToStorage();
+    renderCharacterList();
+    renderCharacterForm();
+    renderActiveCharBanner();
+    flashMessage('已删除角色');
+  }
+
+  function setActiveCharacter(id) {
+    activeCharId = id;
+    saveCharactersToStorage();
+    renderCharacterList();
+    renderActiveCharBanner();
+  }
+
+  function setActiveAndGo() {
+    if (!editingChar) return;
+    syncFormToEditing();
+    if (!editingChar.handle.trim()) {
+      flashMessage('⚠ 请填写代号 HANDLE');
+      return;
+    }
+    const idx = characters.findIndex(c => c.id === editingChar.id);
+    if (idx >= 0) characters[idx] = editingChar;
+    else characters.push(editingChar);
+    activeCharId = editingChar.id;
+    saveCharactersToStorage();
+    renderCharacterList();
+    renderActiveCharBanner();
+    switchView('dice');
+    flashMessage('★ ' + editingChar.handle + ' 已出战');
+  }
+
+  function getActiveCharacter() {
+    return characters.find(c => c.id === activeCharId);
+  }
+
+  // ── Form ↔ Data Sync ──
+
+  function syncFormToEditing() {
+    if (!editingChar) return;
+    editingChar.handle   = document.getElementById('char-handle').value;
+    editingChar.realName = document.getElementById('char-realname').value;
+    editingChar.role     = document.getElementById('char-role').value;
+    editingChar.notes    = document.getElementById('char-notes').value;
+  }
+
+  // ── Renderers ──
+
+  function renderCharacterForm() {
+    if (!editingChar) editingChar = emptyCharacter();
+    document.getElementById('char-handle').value   = editingChar.handle || '';
+    document.getElementById('char-realname').value = editingChar.realName || '';
+    document.getElementById('char-role').value     = editingChar.role || '';
+    document.getElementById('char-notes').value    = editingChar.notes || '';
+    renderRoleDisplay();
+    renderStatsGrid();
+    renderSkillsGrid();
+    updateDerivedStats();
+    updatePointsBudget();
+  }
+
+  function renderRoleDisplay() {
+    const role = editingChar?.role;
+    const display = document.getElementById('role-display');
+    if (!role || !ROLES[role]) {
+      display.style.display = 'none';
+      return;
+    }
+    const r = ROLES[role];
+    display.style.display = 'block';
+    document.getElementById('role-name').textContent    = `${r.cn} · ${r.en}`;
+    document.getElementById('role-desc').textContent    = r.desc;
+    document.getElementById('role-ability').textContent = '★ 核心能力: ' + r.ability;
+  }
+
+  function renderStatsGrid() {
+    const grid = document.getElementById('stats-grid');
+    grid.innerHTML = '';
+    STATS_DEF.forEach(s => {
+      const v = editingChar.stats[s.key];
+      const item = document.createElement('div');
+      item.className = 'stat-item';
+      item.innerHTML = `
+        <div class="stat-name">
+          <span class="stat-en">${s.key}</span>
+          <span class="stat-cn">${s.cn}</span>
+        </div>
+        <div class="stat-controls">
+          <button class="stat-btn" onclick="adjustStat('${s.key}', -1)">−</button>
+          <span class="stat-value" id="stat-${s.key}">${v}</span>
+          <button class="stat-btn" onclick="adjustStat('${s.key}', 1)">+</button>
+        </div>
+      `;
+      grid.appendChild(item);
+    });
+  }
+
+  function adjustStat(key, delta) {
+    if (!editingChar) return;
+    const v = (editingChar.stats[key] || 4) + delta;
+    if (v < 1 || v > 8) return;
+    editingChar.stats[key] = v;
+    document.getElementById(`stat-${key}`).textContent = v;
+    updateDerivedStats();
+    updatePointsBudget();
+  }
+
+  function applyStatMethod(method) {
+    if (!editingChar) return;
+    if (method === 'pointbuy') {
+      STATS_DEF.forEach(s => editingChar.stats[s.key] = 4);
+      flashMessage('已重置为基础 4，请用 +/- 分配点数');
+    } else if (method === 'classic') {
+      const arr = [8, 7, 7, 6, 6, 6, 5, 5, 4, 3];
+      // Shuffle so player can re-roll different distributions
+      const shuffled = arr.slice().sort(() => Math.random() - 0.5);
+      STATS_DEF.forEach((s, i) => editingChar.stats[s.key] = shuffled[i]);
+      flashMessage('经典阵列 [8,7,7,6,6,6,5,5,4,3] 已随机分配');
+    } else if (method === 'random') {
+      STATS_DEF.forEach(s => {
+        // 2d4 (range 2-8) gives bell curve around 5
+        editingChar.stats[s.key] = clamp(rand(1,4) + rand(1,4), 2, 8);
+      });
+      flashMessage('已随机生成 (2d4)');
+    }
+    renderStatsGrid();
+    updateDerivedStats();
+    updatePointsBudget();
+  }
+
+  function updatePointsBudget() {
+    if (!editingChar) return;
+    const total = Object.values(editingChar.stats).reduce((a, b) => a + b, 0);
+    const remaining = 62 - total;
+    const el = document.getElementById('points-budget');
+    el.innerHTML = `已用: <span class="num">${total}</span> · 剩余 <span class="num">${remaining}</span> / 62`;
+    el.classList.toggle('over', remaining < 0);
+  }
+
+  function updateDerivedStats() {
+    if (!editingChar) return;
+    const s = editingChar.stats;
+    const hp       = 10 + 5 * Math.floor((s.BODY + s.WILL) / 2);
+    const humanity = s.EMP * 10;
+    const death    = s.BODY;
+    const walk     = s.MOVE * 2;
+    const run      = s.MOVE * 4;
+    const wound    = Math.ceil(hp / 2);
+
+    document.getElementById('d-hp').textContent       = hp;
+    document.getElementById('d-humanity').textContent = humanity;
+    document.getElementById('d-death').textContent    = death;
+    document.getElementById('d-walk').textContent     = walk + 'm';
+    document.getElementById('d-run').textContent      = run + 'm';
+    document.getElementById('d-wound').textContent    = wound;
+  }
+
+  function renderSkillsGrid() {
+    const grid = document.getElementById('skills-grid');
+    grid.innerHTML = '';
+    Object.entries(SKILLS_DEF).forEach(([cat, skills]) => {
+      const catDiv = document.createElement('div');
+      catDiv.className = 'skill-category';
+      catDiv.textContent = cat;
+      grid.appendChild(catDiv);
+      skills.forEach(sk => {
+        const v = editingChar.skills[sk.key] || 0;
+        const item = document.createElement('div');
+        item.className = 'skill-item';
+        item.innerHTML = `
+          <div class="skill-name">${sk.cn}<small>${sk.stat}</small></div>
+          <input type="number" class="skill-input" min="0" max="10" value="${v}"
+                 onchange="setSkill('${sk.key}', this.value)">
+        `;
+        grid.appendChild(item);
+      });
+    });
+  }
+
+  function setSkill(key, val) {
+    if (!editingChar) return;
+    editingChar.skills[key] = clamp(parseInt(val) || 0, 0, 10);
+  }
+
+  function renderCharacterList() {
+    const list  = document.getElementById('char-list');
+    const count = document.getElementById('char-count');
+    if (!list) return;
+    count.textContent = characters.length + ' 角色';
+    if (characters.length === 0) {
+      list.innerHTML = '<div id="char-list-empty">// 名册空空如也 //<br><br>从左侧创建第一个角色</div>';
+      return;
+    }
+    list.innerHTML = characters.map(c => {
+      const role = ROLES[c.role];
+      const isActive = (c.id === activeCharId);
+      const hp = 10 + 5 * Math.floor((c.stats.BODY + c.stats.WILL) / 2);
+      const stats = `INT${c.stats.INT} REF${c.stats.REF} BODY${c.stats.BODY} EMP${c.stats.EMP} · HP${hp}`;
+      return `
+        <div class="char-card ${isActive ? 'active' : ''}">
+          <div class="char-card-handle">${isActive ? '★ ' : ''}${escapeHtml(c.handle || '(无名)')}</div>
+          <div class="char-card-role">${role ? role.cn + ' · ' + role.en : '未选择职业'}</div>
+          <div class="char-card-stats">${stats}</div>
+          <div class="char-card-actions">
+            <button class="btn btn-sm" onclick="loadCharacterIntoForm('${c.id}')">编辑</button>
+            <button class="btn btn-sm btn-yellow" onclick="setActiveCharacter('${c.id}')">${isActive ? '出战中' : '设为出战'}</button>
+            <button class="btn btn-sm" onclick="deleteCharacter('${c.id}')">删除</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderActiveCharBanner() {
+    const banner = document.getElementById('active-char-banner');
+    const active = getActiveCharacter();
+    if (!active) {
+      banner.classList.add('hidden');
+      return;
+    }
+    banner.classList.remove('hidden');
+    document.getElementById('banner-handle').textContent = active.handle || '(无名)';
+    const role = ROLES[active.role];
+    document.getElementById('banner-role').textContent =
+      role ? `${role.cn} · ${role.en}` : '— 无职业';
+
+    const hp = 10 + 5 * Math.floor((active.stats.BODY + active.stats.WILL) / 2);
+    document.getElementById('banner-hp').textContent  = hp;
+    document.getElementById('banner-hmn').textContent = active.stats.EMP * 10;
+
+    document.getElementById('banner-stats').innerHTML = STATS_DEF.map(s => `
+      <div class="banner-stat" onclick="useStatForRoll('${s.key}', ${active.stats[s.key]})"
+           title="${s.cn} - 点击填入检定的 STAT">
+        <span class="banner-stat-label">${s.key}</span>
+        <span class="banner-stat-value">${active.stats[s.key]}</span>
+      </div>
+    `).join('');
+
+    // Populate skill picker with character's non-zero skills
+    const sel = document.getElementById('banner-skill-select');
+    const skillOptions = ['<option value="">-- 选择技能 --</option>'];
+    Object.entries(SKILLS_DEF).forEach(([cat, skills]) => {
+      const learnedSkills = skills.filter(sk => (active.skills[sk.key] || 0) > 0);
+      if (learnedSkills.length === 0) return;
+      skillOptions.push(`<optgroup label="${cat}">`);
+      learnedSkills.forEach(sk => {
+        const lvl = active.skills[sk.key];
+        const statVal = active.stats[sk.stat];
+        skillOptions.push(
+          `<option value="${sk.key}" data-stat="${sk.stat}" data-stat-val="${statVal}" data-skill-val="${lvl}">
+            ${sk.cn} (${sk.stat}${statVal} + 技能${lvl} = ${statVal+lvl})
+          </option>`
+        );
+      });
+      skillOptions.push('</optgroup>');
+    });
+    if (skillOptions.length === 1) {
+      skillOptions.push('<option value="" disabled>(尚未学习任何技能)</option>');
+    }
+    sel.innerHTML = skillOptions.join('');
+  }
+
+  function useStatForRoll(key, val) {
+    document.getElementById('stat-val').value = val;
+    document.getElementById('stat-val').focus();
+    flashMessage(`已填入 ${key}: ${val}`);
+  }
+
+  function useSkillForRoll(skillKey) {
+    if (!skillKey) return;
+    const active = getActiveCharacter();
+    if (!active) return;
+    let skillDef;
+    Object.values(SKILLS_DEF).forEach(arr => {
+      arr.forEach(sk => { if (sk.key === skillKey) skillDef = sk; });
+    });
+    if (!skillDef) return;
+    const statVal  = active.stats[skillDef.stat];
+    const skillVal = active.skills[skillKey] || 0;
+    document.getElementById('stat-val').value  = statVal;
+    document.getElementById('skill-val').value = skillVal;
+    flashMessage(`${skillDef.cn}: ${skillDef.stat}${statVal} + 技能${skillVal}`);
+    // reset the select
+    document.getElementById('banner-skill-select').value = '';
+  }
+
+  // ── Tab Switching ──
+
+  function switchView(view) {
+    document.querySelectorAll('.tab').forEach(t =>
+      t.classList.toggle('active', t.dataset.view === view));
+    document.querySelectorAll('.view').forEach(v =>
+      v.classList.toggle('active', v.id === 'view-' + view));
+    if (view === 'character') {
+      if (!editingChar) {
+        if (activeCharId && characters.find(c => c.id === activeCharId)) {
+          loadCharacterIntoForm(activeCharId);
+        } else {
+          newCharacter();
+        }
+      }
+    }
+  }
+
+  // ── Helpers ──
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, m =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+  }
+
+  let flashTimeout = null;
+  function flashMessage(text) {
+    const el = document.getElementById('flash-msg');
+    el.textContent = text;
+    el.classList.add('show');
+    if (flashTimeout) clearTimeout(flashTimeout);
+    flashTimeout = setTimeout(() => el.classList.remove('show'), 1800);
+  }
+
+  // ── Initialize Character System ──
+
+  function initCharacterSystem() {
+    // Populate role select
+    const sel = document.getElementById('char-role');
+    Object.entries(ROLES).forEach(([key, r]) => {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = `${r.cn} · ${r.en}`;
+      sel.appendChild(opt);
+    });
+
+    // Wire up identity inputs
+    sel.addEventListener('change', () => {
+      if (editingChar) editingChar.role = sel.value;
+      renderRoleDisplay();
+    });
+    document.getElementById('char-handle').addEventListener('input', e => {
+      if (editingChar) editingChar.handle = e.target.value;
+    });
+    document.getElementById('char-realname').addEventListener('input', e => {
+      if (editingChar) editingChar.realName = e.target.value;
+    });
+    document.getElementById('char-notes').addEventListener('input', e => {
+      if (editingChar) editingChar.notes = e.target.value;
+    });
+
+    // Wire up tab buttons
+    document.querySelectorAll('.tab').forEach(t => {
+      t.addEventListener('click', () => switchView(t.dataset.view));
+    });
+
+    // Load saved data
+    loadCharactersFromStorage();
+    renderCharacterList();
+    renderActiveCharBanner();
+  }
+
+  initCharacterSystem();
 </script>
 </body>
 </html>
