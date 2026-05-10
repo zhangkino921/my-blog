@@ -1,0 +1,2758 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NETRUNNER DICE // 赛博朋克红骰子模拟器</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #080808;
+      --bg-secondary: #0f0f0f;
+      --bg-panel: #111111;
+      --bg-panel2: #141414;
+      --border: #2a0008;
+      --border-bright: #ff0033;
+      --accent-red: #ff0033;
+      --accent-red-dim: #cc0022;
+      --accent-red-glow: rgba(255,0,51,0.4);
+      --accent-yellow: #ffcc00;
+      --accent-cyan: #00e5ff;
+      --text-primary: #d0d0d0;
+      --text-dim: #555;
+      --text-bright: #ffffff;
+      --success: #00e676;
+      --failure: #ff3d00;
+      --critical-color: #ff0033;
+      --fumble-color: #ff6600;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { height: 100%; }
+
+    body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: 'Share Tech Mono', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* ── Scanlines ── */
+    #scanlines {
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.18) 2px,
+        rgba(0,0,0,0.18) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+      animation: scanMove 8s linear infinite;
+    }
+    @keyframes scanMove {
+      from { background-position: 0 0; }
+      to   { background-position: 0 100px; }
+    }
+
+    /* ── Noise overlay ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 9998;
+      opacity: 0.6;
+    }
+
+    /* ── Header ── */
+    header {
+      border-bottom: 1px solid var(--border);
+      padding: 18px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-secondary);
+      position: relative;
+      overflow: hidden;
+    }
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent-red), transparent);
+      animation: borderPulse 3s ease-in-out infinite;
+    }
+    @keyframes borderPulse {
+      0%,100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+    .header-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 900;
+      color: var(--accent-red);
+      text-shadow: 0 0 20px var(--accent-red-glow), 0 0 40px rgba(255,0,51,0.2);
+      letter-spacing: 0.1em;
+    }
+    .header-title span {
+      color: var(--text-dim);
+    }
+    .header-sub {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      letter-spacing: 0.2em;
+    }
+    .header-badge {
+      font-size: 0.65rem;
+      color: var(--accent-yellow);
+      border: 1px solid var(--accent-yellow);
+      padding: 3px 8px;
+      letter-spacing: 0.15em;
+      opacity: 0.8;
+    }
+
+    /* ── Main Grid ── */
+    #main-grid {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 0;
+      min-height: calc(100vh - 70px);
+    }
+
+    /* ── Panels ── */
+    #left-panel {
+      padding: 24px;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    #right-panel {
+      padding: 20px;
+      background: var(--bg-secondary);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      padding: 18px;
+      position: relative;
+    }
+    .panel-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0;
+      width: 3px; height: 100%;
+      background: var(--accent-red-dim);
+    }
+    .panel-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.7rem;
+      color: var(--accent-red);
+      letter-spacing: 0.25em;
+      margin-bottom: 14px;
+      text-transform: uppercase;
+    }
+
+    /* ── Dice Display ── */
+    #dice-arena {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 28px;
+      min-height: 160px;
+    }
+    .die-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .die-face {
+      width: 100px;
+      height: 100px;
+      border: 2px solid var(--border);
+      background: var(--bg-panel2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 2.4rem;
+      font-weight: 900;
+      color: var(--text-primary);
+      position: relative;
+      clip-path: polygon(10% 0%, 90% 0%, 100% 10%, 100% 90%, 90% 100%, 10% 100%, 0% 90%, 0% 10%);
+      transition: all 0.3s;
+    }
+    .die-face.rolling {
+      animation: diceRollAnim 0.08s ease-in-out infinite;
+      border-color: var(--accent-red-dim);
+      color: var(--accent-red);
+    }
+    .die-face.critical {
+      border-color: var(--accent-red);
+      color: var(--accent-red);
+      box-shadow: 0 0 30px var(--accent-red-glow), inset 0 0 20px rgba(255,0,51,0.1);
+      animation: critPulse 0.5s ease-in-out infinite alternate;
+    }
+    .die-face.fumble {
+      border-color: var(--fumble-color);
+      color: var(--fumble-color);
+      box-shadow: 0 0 20px rgba(255,102,0,0.4), inset 0 0 15px rgba(255,102,0,0.1);
+    }
+    .die-face.success-glow {
+      border-color: var(--success);
+      color: var(--success);
+      box-shadow: 0 0 20px rgba(0,230,118,0.3);
+    }
+    @keyframes diceRollAnim {
+      0%   { transform: rotate(-2deg) scale(1.02); }
+      100% { transform: rotate(2deg) scale(0.98); }
+    }
+    @keyframes critPulse {
+      from { box-shadow: 0 0 20px var(--accent-red-glow); }
+      to   { box-shadow: 0 0 50px var(--accent-red-glow), 0 0 80px rgba(255,0,51,0.2); }
+    }
+    .die-label {
+      font-size: 0.62rem;
+      color: var(--text-dim);
+      letter-spacing: 0.2em;
+    }
+    .die-extra {
+      font-size: 0.7rem;
+      color: var(--accent-yellow);
+      min-height: 16px;
+      text-align: center;
+    }
+
+    /* ── Result Display ── */
+    #result-display {
+      text-align: center;
+      padding: 16px;
+      position: relative;
+    }
+    #result-total {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 3.5rem;
+      font-weight: 900;
+      color: var(--text-primary);
+      line-height: 1;
+      transition: color 0.3s;
+    }
+    #result-total.success { color: var(--success); text-shadow: 0 0 20px rgba(0,230,118,0.5); }
+    #result-total.failure { color: var(--failure); text-shadow: 0 0 20px rgba(255,61,0,0.5); }
+    #result-total.critical { color: var(--critical-color); text-shadow: 0 0 30px var(--accent-red-glow); animation: glitchText 0.15s steps(1) infinite; }
+    #result-total.fumble-result { color: var(--fumble-color); }
+    @keyframes glitchText {
+      0%   { text-shadow: 2px 0 #ff0033, -2px 0 #00e5ff; }
+      33%  { text-shadow: -2px 0 #ff0033, 2px 0 #00e5ff; }
+      66%  { text-shadow: 0 2px #ff0033, 0 -2px #00e5ff; }
+      100% { text-shadow: 2px 0 #ff0033, -2px 0 #00e5ff; }
+    }
+    #result-label {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      letter-spacing: 0.2em;
+      margin-top: 6px;
+    }
+    #result-judgment {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      margin-top: 8px;
+      letter-spacing: 0.15em;
+      min-height: 28px;
+    }
+    #result-judgment.success { color: var(--success); }
+    #result-judgment.failure { color: var(--failure); }
+    #result-judgment.critical { color: var(--critical-color); animation: glitchText 0.15s steps(1) infinite; }
+    #result-judgment.fumble-result { color: var(--fumble-color); }
+    #result-detail {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      margin-top: 6px;
+      min-height: 18px;
+      font-family: 'Share Tech Mono', monospace;
+    }
+
+    /* ── Skill Check Panel ── */
+    .input-row {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .input-group label {
+      font-size: 0.62rem;
+      color: var(--accent-red);
+      letter-spacing: 0.2em;
+    }
+    .input-group input,
+    .input-group select {
+      background: var(--bg-primary);
+      border: 1px solid #2a0008;
+      color: var(--text-primary);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 1rem;
+      padding: 6px 10px;
+      width: 70px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .input-group select { width: 130px; cursor: pointer; }
+    .input-group input:focus,
+    .input-group select:focus {
+      border-color: var(--accent-red-dim);
+      box-shadow: 0 0 8px rgba(255,0,51,0.3);
+    }
+    .input-group input[type=number]::-webkit-inner-spin-button { opacity: 0.3; }
+
+    /* ── Buttons ── */
+    .btn {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      padding: 9px 18px;
+      border: 1px solid;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: all 0.15s;
+      background: transparent;
+      position: relative;
+      overflow: hidden;
+    }
+    .btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: currentColor;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+    .btn:hover::before { opacity: 0.08; }
+    .btn:active { transform: scale(0.97); }
+
+    .btn-primary {
+      color: var(--accent-red);
+      border-color: var(--accent-red);
+      box-shadow: 0 0 12px rgba(255,0,51,0.2);
+    }
+    .btn-primary:hover {
+      box-shadow: 0 0 20px rgba(255,0,51,0.5), inset 0 0 20px rgba(255,0,51,0.05);
+      color: #fff;
+    }
+    .btn-primary:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    .btn-sm {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.75rem;
+      padding: 7px 12px;
+      letter-spacing: 0.1em;
+      color: var(--text-primary);
+      border-color: #333;
+    }
+    .btn-sm:hover {
+      color: var(--accent-red);
+      border-color: var(--accent-red-dim);
+    }
+
+    .btn-yellow {
+      color: var(--accent-yellow);
+      border-color: var(--accent-yellow);
+    }
+    .btn-yellow:hover { box-shadow: 0 0 16px rgba(255,204,0,0.4); }
+
+    .btn-cyan {
+      color: var(--accent-cyan);
+      border-color: var(--accent-cyan);
+    }
+    .btn-cyan:hover { box-shadow: 0 0 16px rgba(0,229,255,0.4); }
+
+    /* ── Quick Dice Grid ── */
+    #quick-panel .btn-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* ── Damage Panel ── */
+    #damage-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .dmg-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 8px 14px;
+    }
+    .dmg-btn .dmg-type {
+      font-size: 0.55rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+    }
+
+    /* ── Custom Roll ── */
+    #custom-roll-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    #custom-roll-row .sep {
+      color: var(--text-dim);
+      font-size: 1.1rem;
+    }
+    #custom-roll-row input[type=number] {
+      width: 58px;
+      text-align: center;
+    }
+
+    /* ── Roll Log ── */
+    #log-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    #log-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.7rem;
+      color: var(--accent-red);
+      letter-spacing: 0.2em;
+    }
+    #roll-log {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-right: 4px;
+    }
+    #roll-log::-webkit-scrollbar { width: 4px; }
+    #roll-log::-webkit-scrollbar-track { background: var(--bg-primary); }
+    #roll-log::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    .log-entry {
+      background: var(--bg-panel);
+      border: 1px solid #1a1a1a;
+      border-left: 2px solid #333;
+      padding: 8px 10px;
+      font-size: 0.68rem;
+      line-height: 1.6;
+      animation: logSlide 0.2s ease-out;
+    }
+    @keyframes logSlide {
+      from { opacity: 0; transform: translateX(10px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+    .log-entry.log-critical { border-left-color: var(--accent-red); box-shadow: inset 0 0 20px rgba(255,0,51,0.05), 0 0 8px rgba(255,0,51,0.15); }
+    .log-entry.log-fumble   { border-left-color: var(--fumble-color); background: rgba(255,102,0,0.04); }
+    .log-entry.log-success  { border-left-color: var(--success); }
+    .log-entry.log-fail     { border-left-color: var(--failure); }
+
+    .log-time  { color: var(--text-dim); font-size: 0.6rem; }
+    .log-type  { color: var(--text-dim); }
+    .log-total-success { color: var(--success); font-weight: bold; }
+    .log-total-fail    { color: var(--failure); font-weight: bold; }
+    .log-total-crit    { color: var(--critical-color); font-weight: bold; }
+    .log-total-fumble  { color: var(--fumble-color); font-weight: bold; }
+    .log-total-neutral { color: var(--text-primary); }
+    .log-badge {
+      display: inline-block;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.55rem;
+      padding: 1px 5px;
+      border: 1px solid;
+      letter-spacing: 0.1em;
+      margin-right: 4px;
+    }
+    .badge-crit  { color: var(--critical-color); border-color: var(--critical-color); }
+    .badge-fumble{ color: var(--fumble-color); border-color: var(--fumble-color); }
+    .badge-win   { color: var(--success); border-color: var(--success); }
+    .badge-fail  { color: var(--failure); border-color: var(--failure); }
+
+    #log-empty {
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      margin-top: 40px;
+    }
+
+    /* ── Footer ── */
+    footer {
+      grid-column: 1 / -1;
+      border-top: 1px solid var(--border);
+      padding: 12px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--bg-secondary);
+      font-size: 0.62rem;
+      color: var(--text-dim);
+    }
+    footer a { color: var(--text-dim); text-decoration: none; }
+    footer a:hover { color: var(--accent-red); }
+
+    /* ── Screen Flash ── */
+    #screen-flash {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 9000;
+      opacity: 0;
+      transition: opacity 0.05s;
+    }
+    #screen-flash.flash-red { background: rgba(255,0,51,0.12); }
+    #screen-flash.flash-orange { background: rgba(255,102,0,0.1); }
+    #screen-flash.flash-green { background: rgba(0,230,118,0.08); }
+
+    /* ── Initiative Modal ── */
+    #init-modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 10000;
+      align-items: center;
+      justify-content: center;
+    }
+    #init-modal.open { display: flex; }
+    .modal-box {
+      background: var(--bg-panel);
+      border: 1px solid var(--accent-red-dim);
+      box-shadow: 0 0 40px rgba(255,0,51,0.2);
+      padding: 28px;
+      width: 280px;
+    }
+    .modal-title {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.8rem;
+      color: var(--accent-red);
+      letter-spacing: 0.2em;
+      margin-bottom: 16px;
+    }
+    .modal-box .input-group { margin-bottom: 16px; }
+    .modal-box .input-group input { width: 100%; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+    /* ── Tab Navigation ── */
+    #tab-nav {
+      display: flex;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      position: relative;
+    }
+    .tab {
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 12px 22px;
+      color: var(--text-dim);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-transform: uppercase;
+    }
+    .tab:hover { color: var(--text-primary); }
+    .tab.active {
+      color: var(--accent-red);
+      border-bottom-color: var(--accent-red);
+      text-shadow: 0 0 10px var(--accent-red-glow);
+    }
+    .view { display: none; }
+    .view.active { display: block; }
+
+    /* ── Active Character Banner ── */
+    #active-char-banner {
+      background: linear-gradient(90deg, rgba(255,204,0,0.06) 0%, transparent 100%);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent-yellow);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      font-size: 0.7rem;
+    }
+    #active-char-banner.hidden { display: none; }
+    .banner-id {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 140px;
+    }
+    .banner-handle {
+      font-family: 'Orbitron', sans-serif;
+      color: var(--accent-yellow);
+      font-weight: 900;
+      letter-spacing: 0.15em;
+      font-size: 0.95rem;
+    }
+    .banner-role { color: var(--text-dim); font-size: 0.65rem; letter-spacing: 0.1em; }
+    .banner-vitals {
+      display: flex;
+      gap: 14px;
+      padding: 0 14px;
+      border-left: 1px solid var(--border);
+      border-right: 1px solid var(--border);
+    }
+    .banner-vital { display: flex; flex-direction: column; gap: 2px; }
+    .banner-vital-label {
+      font-size: 0.55rem;
+      color: var(--text-dim);
+      letter-spacing: 0.15em;
+    }
+    .banner-vital-value {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--accent-cyan);
+    }
+    .banner-stats {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+      flex: 1;
+      justify-content: flex-end;
+    }
+    .banner-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      padding: 3px 7px;
+      border: 1px solid #222;
+      transition: all 0.15s;
+      background: var(--bg-panel);
+      min-width: 38px;
+    }
+    .banner-stat:hover {
+      border-color: var(--accent-red);
+      background: rgba(255,0,51,0.05);
+    }
+    .banner-stat-label {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.55rem;
+      color: var(--accent-red);
+      letter-spacing: 0.1em;
+    }
+    .banner-stat-value {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.85rem;
+      font-weight: 900;
+      color: var(--accent-yellow);
+    }
+    .banner-skill-row {
+      width: 100%;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding-top: 8px;
+      margin-top: 4px;
+      border-top: 1px dashed var(--border);
+    }
+    .banner-skill-row label {
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 0.15em;
+    }
+    .banner-skill-select {
+      background: var(--bg-primary);
+      border: 1px solid #333;
+      color: var(--text-primary);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.7rem;
+      padding: 4px 8px;
+      flex: 1;
+      max-width: 320px;
+      cursor: pointer;
+      outline: none;
+    }
+    .banner-skill-select:focus { border-color: var(--accent-red-dim); }
+
+    /* ── Character View Grid ── */
+    #char-grid {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      gap: 0;
+      min-height: calc(100vh - 110px);
+    }
+    #char-left {
+      padding: 24px;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    #char-right {
+      padding: 20px;
+      background: var(--bg-secondary);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Character Identity */
+    .char-identity-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 12px;
+    }
+    .char-text-input, .char-select {
+      background: var(--bg-primary);
+      border: 1px solid #2a0008;
+      color: var(--text-primary);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+      padding: 7px 10px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      width: 100%;
+    }
+    .char-text-input:focus, .char-select:focus {
+      border-color: var(--accent-red-dim);
+      box-shadow: 0 0 8px rgba(255,0,51,0.3);
+    }
+    .role-display {
+      background: var(--bg-panel2);
+      border: 1px solid var(--border);
+      border-left: 2px solid var(--accent-cyan);
+      padding: 10px 14px;
+      font-size: 0.72rem;
+      color: var(--text-primary);
+      margin-top: 12px;
+      line-height: 1.7;
+    }
+    .role-name {
+      color: var(--accent-yellow);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.85rem;
+      letter-spacing: 0.15em;
+      font-weight: 700;
+    }
+    .role-desc { color: var(--text-dim); font-size: 0.7rem; margin-top: 4px; }
+    .role-ability { color: var(--accent-cyan); margin-top: 6px; font-size: 0.72rem; }
+
+    /* Stats Grid */
+    .stats-method-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .points-budget {
+      margin-left: auto;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+    }
+    .points-budget .num {
+      color: var(--accent-yellow);
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.95rem;
+      font-weight: 900;
+    }
+    .points-budget.over .num { color: var(--failure); }
+    #stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+    .stat-item {
+      background: var(--bg-panel2);
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .stat-name { flex: 1; display: flex; flex-direction: column; }
+    .stat-en {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.72rem;
+      color: var(--accent-red);
+      letter-spacing: 0.15em;
+      font-weight: 700;
+    }
+    .stat-cn { font-size: 0.6rem; color: var(--text-dim); }
+    .stat-controls { display: flex; align-items: center; gap: 6px; }
+    .stat-btn {
+      background: var(--bg-primary);
+      border: 1px solid #333;
+      color: var(--text-primary);
+      width: 24px;
+      height: 24px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Share Tech Mono', monospace;
+      transition: all 0.15s;
+    }
+    .stat-btn:hover { border-color: var(--accent-red); color: var(--accent-red); }
+    .stat-value {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 900;
+      color: var(--accent-yellow);
+      min-width: 26px;
+      text-align: center;
+    }
+
+    /* Derived Stats */
+    #derived-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    .derived-item {
+      background: var(--bg-panel2);
+      border: 1px solid var(--border);
+      border-left: 2px solid var(--accent-cyan);
+      padding: 8px 12px;
+    }
+    .derived-label {
+      font-size: 0.55rem;
+      color: var(--text-dim);
+      letter-spacing: 0.15em;
+    }
+    .derived-value {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 1.3rem;
+      font-weight: 900;
+      color: var(--accent-cyan);
+      margin-top: 2px;
+    }
+
+    /* Skills */
+    #skills-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 6px;
+    }
+    .skill-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-panel2);
+      border: 1px solid var(--border);
+      padding: 5px 9px;
+      font-size: 0.7rem;
+    }
+    .skill-name { flex: 1; color: var(--text-primary); }
+    .skill-name small {
+      color: var(--accent-red);
+      margin-left: 4px;
+      font-size: 0.55rem;
+      letter-spacing: 0.1em;
+      font-family: 'Orbitron', sans-serif;
+    }
+    .skill-input {
+      background: var(--bg-primary);
+      border: 1px solid #2a0008;
+      color: var(--accent-yellow);
+      width: 38px;
+      text-align: center;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.85rem;
+      padding: 2px;
+      outline: none;
+    }
+    .skill-input:focus { border-color: var(--accent-red); }
+    .skill-category {
+      grid-column: 1 / -1;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.65rem;
+      color: var(--accent-red);
+      letter-spacing: 0.2em;
+      margin: 8px 0 4px;
+      border-top: 1px solid var(--border);
+      padding-top: 8px;
+    }
+    .skill-category:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+
+    /* Notes textarea */
+    .char-textarea {
+      background: var(--bg-primary);
+      border: 1px solid #2a0008;
+      color: var(--text-primary);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.78rem;
+      padding: 10px 12px;
+      width: 100%;
+      min-height: 70px;
+      resize: vertical;
+      outline: none;
+    }
+    .char-textarea:focus {
+      border-color: var(--accent-red-dim);
+      box-shadow: 0 0 8px rgba(255,0,51,0.3);
+    }
+
+    /* Character List */
+    .char-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-left: 2px solid #333;
+      padding: 10px 12px;
+      transition: all 0.15s;
+      margin-bottom: 8px;
+    }
+    .char-card:hover { border-left-color: var(--accent-red-dim); }
+    .char-card.active {
+      border-left-color: var(--accent-yellow);
+      box-shadow: inset 0 0 24px rgba(255,204,0,0.04);
+    }
+    .char-card-handle {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.85rem;
+      color: var(--accent-yellow);
+      font-weight: 700;
+      letter-spacing: 0.1em;
+    }
+    .char-card-role {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      margin-top: 2px;
+    }
+    .char-card-stats {
+      font-size: 0.62rem;
+      color: var(--accent-cyan);
+      margin-top: 6px;
+      font-family: 'Share Tech Mono', monospace;
+    }
+    .char-card-actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+    .char-card-actions .btn {
+      font-size: 0.55rem;
+      padding: 3px 8px;
+      letter-spacing: 0.1em;
+    }
+    #char-list-empty {
+      text-align: center;
+      color: var(--text-dim);
+      padding: 40px 20px;
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+    }
+
+    /* Flash message */
+    #flash-msg {
+      position: fixed;
+      bottom: 50px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--bg-panel);
+      border: 1px solid var(--accent-yellow);
+      color: var(--accent-yellow);
+      padding: 8px 18px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 0.7rem;
+      letter-spacing: 0.15em;
+      z-index: 10001;
+      box-shadow: 0 0 16px rgba(255,204,0,0.3);
+      opacity: 0;
+      transition: all 0.25s;
+      pointer-events: none;
+    }
+    #flash-msg.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── Server / Connectivity Panel ── */
+    .conn-dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--text-dim);
+      margin-right: 6px;
+      flex-shrink: 0;
+    }
+    .conn-dot.online  { background: var(--success); box-shadow: 0 0 6px var(--success); }
+    .conn-dot.offline { background: var(--failure); }
+    .conn-dot.checking { background: var(--accent-yellow); animation: neonPulse 0.8s infinite; }
+    .server-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .server-row input[type="text"] {
+      flex: 1;
+      min-width: 180px;
+      background: var(--bg-primary);
+      border: 1px solid #2a0008;
+      color: var(--text-primary);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.78rem;
+      padding: 6px 10px;
+      outline: none;
+    }
+    .server-row input:focus { border-color: var(--accent-red-dim); }
+    .conn-status-text {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      white-space: nowrap;
+    }
+    .server-section-title {
+      font-size: 0.62rem;
+      color: var(--accent-red);
+      letter-spacing: 0.2em;
+      margin: 10px 0 6px;
+      text-transform: uppercase;
+    }
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      font-size: 0.72rem;
+    }
+    .toggle-row input[type="checkbox"] { accent-color: var(--accent-red); width: 14px; height: 14px; cursor: pointer; }
+    .toggle-row label { cursor: pointer; color: var(--text-primary); }
+    .session-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+    .session-row input[type="text"] {
+      flex: 1;
+      min-width: 120px;
+      background: var(--bg-primary);
+      border: 1px solid #2a0008;
+      color: var(--text-primary);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.78rem;
+      padding: 6px 10px;
+      outline: none;
+    }
+    #session-status {
+      font-size: 0.65rem;
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+      font-family: 'Share Tech Mono', monospace;
+    }
+    #session-status.active { border-color: var(--success); color: var(--success); }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      #main-grid, #char-grid { grid-template-columns: 1fr; }
+      #right-panel, #char-right {
+        border-top: 1px solid var(--border);
+        max-height: 420px;
+      }
+      footer { grid-column: 1; }
+      .char-identity-row { grid-template-columns: 1fr; }
+      #stats-grid { grid-template-columns: 1fr; }
+      #derived-grid { grid-template-columns: repeat(2, 1fr); }
+      .banner-stats { justify-content: flex-start; }
+    }
+    @media (max-width: 600px) {
+      header { padding: 14px 16px; }
+      .header-title { font-size: 1rem; }
+      #left-panel { padding: 16px; }
+      .die-face { width: 80px; height: 80px; font-size: 1.9rem; }
+      #result-total { font-size: 2.8rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="scanlines"></div>
+<div id="screen-flash"></div>
+
+<!-- Initiative Modal -->
+<div id="init-modal">
+  <div class="modal-box">
+    <div class="modal-title">先攻投掷 // INITIATIVE</div>
+    <div class="input-group">
+      <label>REF 属性值 (1-8)</label>
+      <input type="number" id="init-ref" min="1" max="8" value="4" style="width:100%">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-sm" onclick="closeInitModal()">取消</button>
+      <button class="btn btn-cyan" onclick="confirmInitiative()">投掷!</button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <div>
+    <div class="header-title">NETRUNNER DICE <span>//</span> 骰子模拟器</div>
+    <div class="header-sub">CYBERPUNK RED SYSTEM · 赛博朋克红系统</div>
+  </div>
+  <div class="header-badge">v1.1 // NIGHT CITY</div>
+</header>
+
+<nav id="tab-nav">
+  <button class="tab active" data-view="dice">骰子模拟器 // DICE</button>
+  <button class="tab" data-view="character">人物卡 // CHARACTER</button>
+</nav>
+
+<div id="view-dice" class="view active">
+<div id="main-grid">
+  <!-- LEFT PANEL -->
+  <div id="left-panel">
+
+    <!-- Active Character Banner -->
+    <div id="active-char-banner" class="hidden">
+      <div class="banner-id">
+        <div class="banner-handle" id="banner-handle">—</div>
+        <div class="banner-role" id="banner-role">—</div>
+      </div>
+      <div class="banner-vitals">
+        <div class="banner-vital">
+          <span class="banner-vital-label">HP</span>
+          <span class="banner-vital-value" id="banner-hp">—</span>
+        </div>
+        <div class="banner-vital">
+          <span class="banner-vital-label">人性</span>
+          <span class="banner-vital-value" id="banner-hmn">—</span>
+        </div>
+      </div>
+      <div class="banner-stats" id="banner-stats"></div>
+      <div class="banner-skill-row">
+        <label>快速技能填入:</label>
+        <select class="banner-skill-select" id="banner-skill-select" onchange="useSkillForRoll(this.value)">
+          <option value="">-- 选择技能 --</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Dice Display -->
+    <div class="panel-card">
+      <div class="panel-title">骰子显示 // DICE DISPLAY</div>
+      <div id="dice-arena">
+        <div class="die-wrapper">
+          <div class="die-face" id="main-die">—</div>
+          <div class="die-label" id="main-die-label">D10</div>
+          <div class="die-extra" id="main-die-extra"></div>
+        </div>
+        <div id="extra-dice-area" style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;"></div>
+      </div>
+      <!-- Result -->
+      <div id="result-display">
+        <div id="result-total">—</div>
+        <div id="result-label">等待投掷...</div>
+        <div id="result-judgment"></div>
+        <div id="result-detail"></div>
+      </div>
+    </div>
+
+    <!-- Skill Check -->
+    <div class="panel-card" id="skill-panel">
+      <div class="panel-title">技能检定 // SKILL CHECK &nbsp;<small style="color:var(--text-dim);font-size:0.6rem;letter-spacing:0.1em">1d10 + STAT + 技能 vs DV</small></div>
+      <div class="input-row">
+        <div class="input-group">
+          <label>STAT 属性</label>
+          <input type="number" id="stat-val" min="1" max="8" value="4">
+        </div>
+        <div class="input-group">
+          <label>技能等级</label>
+          <input type="number" id="skill-val" min="0" max="10" value="0">
+        </div>
+        <div class="input-group">
+          <label>DV 难度</label>
+          <select id="dv-select">
+            <option value="9">9 — 简单</option>
+            <option value="13" selected>13 — 普通</option>
+            <option value="15">15 — 困难</option>
+            <option value="17">17 — 很难</option>
+            <option value="21">21 — 专业级</option>
+            <option value="24">24 — 英雄级</option>
+            <option value="29">29 — 传奇级</option>
+          </select>
+        </div>
+        <div class="input-group" style="justify-content:flex-end">
+          <label>&nbsp;</label>
+          <button class="btn btn-primary" id="skill-btn" onclick="doSkillCheck()">投掷检定!</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Dice -->
+    <div class="panel-card" id="quick-panel">
+      <div class="panel-title">快捷骰子 // QUICK ROLL</div>
+      <div class="btn-grid">
+        <button class="btn btn-sm btn-yellow" onclick="openInitModal()">先攻 Initiative</button>
+        <button class="btn btn-sm" onclick="quickRoll(1,10,0,'1d10')">1d10</button>
+        <button class="btn btn-sm" onclick="quickRoll(1,6,0,'1d6')">1d6</button>
+        <button class="btn btn-sm" onclick="quickRoll(2,6,0,'2d6')">2d6</button>
+        <button class="btn btn-sm" onclick="quickRoll(3,6,0,'3d6')">3d6</button>
+        <button class="btn btn-sm" onclick="quickRoll(4,6,0,'4d6')">4d6</button>
+        <button class="btn btn-sm" onclick="quickRoll(5,6,0,'5d6')">5d6</button>
+        <button class="btn btn-sm" onclick="quickRoll(2,10,0,'2d10')">2d10</button>
+      </div>
+    </div>
+
+    <!-- Damage Roll -->
+    <div class="panel-card">
+      <div class="panel-title">武器伤害 // WEAPON DAMAGE</div>
+      <div id="damage-grid">
+        <button class="btn btn-sm dmg-btn" onclick="quickRoll(1,6,0,'轻型近战')">
+          <span>1d6</span><span class="dmg-type">轻型</span>
+        </button>
+        <button class="btn btn-sm dmg-btn" onclick="quickRoll(2,6,0,'手枪/中型')">
+          <span>2d6</span><span class="dmg-type">手枪</span>
+        </button>
+        <button class="btn btn-sm dmg-btn" onclick="quickRoll(3,6,0,'步枪/重型')">
+          <span>3d6</span><span class="dmg-type">步枪</span>
+        </button>
+        <button class="btn btn-sm dmg-btn" onclick="quickRoll(4,6,0,'重武器')">
+          <span>4d6</span><span class="dmg-type">重武器</span>
+        </button>
+        <button class="btn btn-sm dmg-btn" onclick="quickRoll(5,6,0,'爆炸物')">
+          <span>5d6</span><span class="dmg-type">爆炸物</span>
+        </button>
+        <button class="btn btn-sm dmg-btn" onclick="quickRoll(1,10,0,'特殊武器')">
+          <span>1d10</span><span class="dmg-type">特殊</span>
+        </button>
+      </div>
+
+      <!-- Custom Roll -->
+      <div style="border-top:1px solid var(--border);padding-top:14px;margin-top:4px;">
+        <div class="panel-title" style="margin-bottom:10px;">自定义投掷 // CUSTOM</div>
+        <div id="custom-roll-row">
+          <div class="input-group">
+            <label>骰子数</label>
+            <input type="number" id="custom-num" min="1" max="20" value="1">
+          </div>
+          <div class="sep" style="padding-top:20px">d</div>
+          <div class="input-group">
+            <label>骰子面</label>
+            <select id="custom-sides">
+              <option value="4">4</option>
+              <option value="6">6</option>
+              <option value="8">8</option>
+              <option value="10" selected>10</option>
+              <option value="12">12</option>
+              <option value="20">20</option>
+              <option value="100">100</option>
+            </select>
+          </div>
+          <div class="sep" style="padding-top:20px">+</div>
+          <div class="input-group">
+            <label>修正值</label>
+            <input type="number" id="custom-mod" min="-20" max="20" value="0">
+          </div>
+          <div class="input-group" style="justify-content:flex-end">
+            <label>&nbsp;</label>
+            <button class="btn btn-sm btn-cyan" onclick="doCustomRoll()">投掷</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Server Integration Panel -->
+    <div class="panel-card" id="server-panel">
+      <div class="panel-title">
+        联机推送 // SERVER
+        <span style="float:right;display:flex;align-items:center;gap:4px;">
+          <span class="conn-dot" id="conn-dot"></span>
+          <span class="conn-status-text" id="conn-status-text">未连接</span>
+        </span>
+      </div>
+
+      <!-- Server URL + ping -->
+      <div class="server-section-title">服务器地址</div>
+      <div class="server-row">
+        <input type="text" id="srv-url" placeholder="http://localhost:3000" value="http://localhost:3000">
+        <input type="text" id="srv-player" placeholder="玩家代号" style="max-width:120px">
+        <button class="btn btn-sm" onclick="pingServer()">测试连接</button>
+      </div>
+
+      <!-- Session controls -->
+      <div class="server-section-title">Session 管理</div>
+      <div class="session-row">
+        <input type="text" id="session-name" placeholder="Session 名称（可选）">
+        <button class="btn btn-sm btn-yellow" onclick="startSession()">开始 Session</button>
+        <button class="btn btn-sm" onclick="endSession()">结束</button>
+        <div id="session-status">无 Session</div>
+      </div>
+
+      <!-- Auto-send toggles -->
+      <div class="server-section-title">自动推送</div>
+      <div class="toggle-row">
+        <input type="checkbox" id="toggle-rolls" checked>
+        <label for="toggle-rolls">自动推送骰点结果到 Discord</label>
+      </div>
+      <div class="toggle-row">
+        <input type="checkbox" id="toggle-char">
+        <label for="toggle-char">切换出战角色时自动推送角色卡</label>
+      </div>
+
+      <!-- Export -->
+      <div class="server-section-title">导出数据包</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-sm btn-cyan" onclick="exportJson()">下载 JSON</button>
+        <button class="btn btn-sm btn-cyan" onclick="exportMarkdown()">下载 Markdown</button>
+        <button class="btn btn-sm" onclick="copyToClipboard()">复制纯文本到剪贴板</button>
+      </div>
+    </div>
+
+  </div><!-- /left-panel -->
+
+  <!-- RIGHT PANEL -->
+  <div id="right-panel">
+    <div id="log-header">
+      <div id="log-title">投掷历史 // ROLL LOG</div>
+      <button class="btn btn-sm" onclick="clearLog()" style="padding:4px 10px;font-size:0.6rem;">清除 CLEAR</button>
+    </div>
+    <div id="roll-log">
+      <div id="log-empty">// 等待投掷... //</div>
+    </div>
+  </div>
+
+</div><!-- /main-grid -->
+</div><!-- /view-dice -->
+
+<!-- ═══════════════ CHARACTER VIEW ═══════════════ -->
+<div id="view-character" class="view">
+  <div id="char-grid">
+
+    <!-- LEFT: Character Sheet Form -->
+    <div id="char-left">
+
+      <!-- Identity -->
+      <div class="panel-card">
+        <div class="panel-title">人物身份 // IDENTITY</div>
+        <div class="char-identity-row">
+          <div class="input-group">
+            <label>代号 HANDLE *</label>
+            <input type="text" class="char-text-input" id="char-handle" placeholder="V / Johnny / ...">
+          </div>
+          <div class="input-group">
+            <label>本名 NAME</label>
+            <input type="text" class="char-text-input" id="char-realname" placeholder="(可选)">
+          </div>
+          <div class="input-group">
+            <label>职业 ROLE</label>
+            <select class="char-select" id="char-role">
+              <option value="">-- 选择职业 --</option>
+            </select>
+          </div>
+        </div>
+        <div class="role-display" id="role-display" style="display:none;">
+          <div class="role-name" id="role-name"></div>
+          <div class="role-desc" id="role-desc"></div>
+          <div class="role-ability" id="role-ability"></div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="panel-card">
+        <div class="panel-title">基础属性 // STATS &nbsp;<small style="color:var(--text-dim);font-size:0.6rem;letter-spacing:0.1em">每项 1-8</small></div>
+        <div class="stats-method-row">
+          <button class="btn btn-sm btn-yellow" onclick="applyStatMethod('pointbuy')">点数购买基础</button>
+          <button class="btn btn-sm btn-cyan" onclick="applyStatMethod('classic')">经典阵列</button>
+          <button class="btn btn-sm" onclick="applyStatMethod('random')">随机生成</button>
+          <div class="points-budget" id="points-budget">已用: <span class="num">40</span> · 推荐预算 <span class="num">62</span></div>
+        </div>
+        <div id="stats-grid"></div>
+      </div>
+
+      <!-- Derived Stats -->
+      <div class="panel-card">
+        <div class="panel-title">衍生数值 // DERIVED &nbsp;<small style="color:var(--text-dim);font-size:0.6rem;letter-spacing:0.1em">自动计算</small></div>
+        <div id="derived-grid">
+          <div class="derived-item">
+            <div class="derived-label">HP 生命值</div>
+            <div class="derived-value" id="d-hp">10</div>
+          </div>
+          <div class="derived-item">
+            <div class="derived-label">人性值 HUMANITY</div>
+            <div class="derived-value" id="d-humanity">40</div>
+          </div>
+          <div class="derived-item">
+            <div class="derived-label">死亡豁免 DEATH SAVE</div>
+            <div class="derived-value" id="d-death">4</div>
+          </div>
+          <div class="derived-item">
+            <div class="derived-label">步行 WALK</div>
+            <div class="derived-value" id="d-walk">8m</div>
+          </div>
+          <div class="derived-item">
+            <div class="derived-label">奔跑 RUN</div>
+            <div class="derived-value" id="d-run">16m</div>
+          </div>
+          <div class="derived-item">
+            <div class="derived-label">伤口阈值 WOUND</div>
+            <div class="derived-value" id="d-wound">5</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Skills -->
+      <div class="panel-card">
+        <div class="panel-title">技能 // SKILLS &nbsp;<small style="color:var(--text-dim);font-size:0.6rem;letter-spacing:0.1em">每项 0-10</small></div>
+        <div id="skills-grid"></div>
+      </div>
+
+      <!-- Notes -->
+      <div class="panel-card">
+        <div class="panel-title">背景与笔记 // NOTES</div>
+        <textarea class="char-textarea" id="char-notes" placeholder="人物背景、装备、欠债、终生目标..."></textarea>
+      </div>
+
+      <!-- Actions -->
+      <div class="panel-card">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="saveCharacter()">保存角色 SAVE</button>
+          <button class="btn btn-yellow" onclick="setActiveAndGo()">设为出战 → 投骰</button>
+          <button class="btn btn-sm btn-cyan" onclick="pushCharacterNow()">推送角色卡到 Discord</button>
+          <button class="btn btn-sm" onclick="newCharacter()">新建空白 NEW</button>
+        </div>
+      </div>
+
+    </div><!-- /char-left -->
+
+    <!-- RIGHT: Roster -->
+    <div id="char-right">
+      <div id="log-header">
+        <div id="log-title">角色名册 // ROSTER</div>
+        <span style="color:var(--text-dim);font-size:0.6rem;letter-spacing:0.15em" id="char-count">0 角色</span>
+      </div>
+      <div id="char-list" style="flex:1;overflow-y:auto;padding-right:4px;"></div>
+    </div>
+
+  </div><!-- /char-grid -->
+</div><!-- /view-character -->
+
+<div id="flash-msg"></div>
+
+<footer>
+  <span>CYBERPUNK RED DICE SIMULATOR · 赛博朋克红骰子模拟器</span>
+  <span>NIGHT CITY · <span id="footer-time"></span></span>
+</footer>
+
+<script>
+  // ── Utilities ──────────────────────────────────────────────────────────────
+
+  function rand(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+  }
+
+  function now() {
+    return new Date().toLocaleTimeString('zh-CN', { hour12: false });
+  }
+
+  function clamp(v, min, max) {
+    return Math.max(min, Math.min(max, v));
+  }
+
+  // ── Core Dice Mechanics ────────────────────────────────────────────────────
+
+  // Exploding d10 for skill checks (Cyberpunk RED official rules)
+  // Critical Success: natural 10 → keep rolling while result is 10, add all
+  // Critical Failure: natural 1  → keep rolling while result is 1,  subtract all
+  // Returns: { roll, extra (signed chain), critical, fumble, chainRolls }
+  function rollD10Exploding() {
+    const roll = rand(1, 10);
+    const critical = (roll === 10);
+    const fumble   = (roll === 1);
+    const extra = [];       // signed bonus values to sum
+    const chainRolls = [];  // raw extra roll values for display
+
+    if (critical) {
+      let last = roll;
+      while (last === 10) {
+        const r = rand(1, 10);
+        chainRolls.push(r);
+        extra.push(r);
+        last = r;
+      }
+    } else if (fumble) {
+      let last = roll;
+      while (last === 1) {
+        const r = rand(1, 10);
+        chainRolls.push(r);
+        extra.push(-r);
+        last = r;
+      }
+    }
+
+    return { roll, extra, critical, fumble, chainRolls };
+  }
+
+  // Standard non-exploding die
+  function rollDie(sides) {
+    return rand(1, sides);
+  }
+
+  // ── Skill Check ────────────────────────────────────────────────────────────
+
+  function skillCheck(stat, skill, dv, label) {
+    const { roll, extra, critical, fumble, chainRolls } = rollD10Exploding();
+    const modifier = stat + skill;
+    const extraSum = extra.reduce((a, b) => a + b, 0);
+    const total = Math.max(1, roll + extraSum + modifier);
+    const success = total >= dv;
+
+    return {
+      type: 'skill',
+      roll, extra, chainRolls, modifier, total, dv,
+      success, critical, fumble,
+      label: label || '技能检定',
+      timestamp: now()
+    };
+  }
+
+  // ── Damage / Custom Roll ───────────────────────────────────────────────────
+
+  function rollDamage(numDice, sides, modifier, label) {
+    const rolls = Array.from({ length: numDice }, () => rollDie(sides));
+    const total = rolls.reduce((a, b) => a + b, 0) + modifier;
+    return {
+      type: 'damage',
+      rolls, sides, modifier, total,
+      label: label || `${numDice}d${sides}`,
+      timestamp: now()
+    };
+  }
+
+  // ── Initiative ─────────────────────────────────────────────────────────────
+
+  function rollInitiative(ref) {
+    const roll = rollDie(10);
+    const total = roll + ref;
+    return {
+      type: 'initiative',
+      rolls: [roll], modifier: ref, total,
+      label: '先攻',
+      timestamp: now()
+    };
+  }
+
+  // ── Animation Engine ───────────────────────────────────────────────────────
+
+  let animActive = false;
+
+  function animateDice(el, finalValue, duration, onComplete) {
+    const start = performance.now();
+    const sides = parseInt(el.dataset.sides || '10', 10);
+
+    function frame(t) {
+      const elapsed = t - start;
+      const progress = Math.min(elapsed / duration, 1);
+      // Slow down towards end
+      if (progress < 1) {
+        const interval = 40 + progress * 80;
+        el.textContent = rand(1, sides);
+        setTimeout(() => requestAnimationFrame(frame), interval);
+      } else {
+        el.textContent = finalValue;
+        if (onComplete) onComplete();
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  // Multi-die animation for damage rolls
+  function animateMultiDice(diceEl, finalValues, duration, onComplete) {
+    let completed = 0;
+    const total = diceEl.length;
+    diceEl.forEach((el, i) => {
+      const delay = i * 80;
+      setTimeout(() => {
+        animateDice(el, finalValues[i], duration - delay, () => {
+          completed++;
+          if (completed === total && onComplete) onComplete();
+        });
+      }, delay);
+    });
+  }
+
+  // ── Screen Flash ───────────────────────────────────────────────────────────
+
+  function triggerFlash(type) {
+    const el = document.getElementById('screen-flash');
+    el.className = `flash-${type}`;
+    el.style.opacity = '1';
+    setTimeout(() => { el.style.opacity = '0'; }, 120);
+    setTimeout(() => { el.style.opacity = '0'; el.className = ''; }, 300);
+  }
+
+  // ── Set Result Display ─────────────────────────────────────────────────────
+
+  function setResult(result) {
+    const totalEl   = document.getElementById('result-total');
+    const labelEl   = document.getElementById('result-label');
+    const judgEl    = document.getElementById('result-judgment');
+    const detailEl  = document.getElementById('result-detail');
+
+    totalEl.className = '';
+    judgEl.className = '';
+
+    totalEl.textContent = result.total;
+    labelEl.textContent = result.label;
+
+    if (result.type === 'skill') {
+      if (result.critical && result.success) {
+        totalEl.className = 'critical';
+        judgEl.className = 'critical';
+        judgEl.textContent = '⚡ 暴击成功! CRITICAL!';
+        triggerFlash('red');
+      } else if (result.fumble) {
+        totalEl.className = 'fumble-result';
+        judgEl.className = 'fumble-result';
+        judgEl.textContent = '☠ 致命失误! FUMBLE!';
+        triggerFlash('orange');
+      } else if (result.success) {
+        totalEl.className = 'success';
+        judgEl.className = 'success';
+        judgEl.textContent = '✓ 成功 SUCCESS';
+        triggerFlash('green');
+      } else {
+        totalEl.className = 'failure';
+        judgEl.className = 'failure';
+        judgEl.textContent = '✗ 失败 FAILURE';
+      }
+
+      let chainStr = '';
+      if (result.chainRolls && result.chainRolls.length) {
+        chainStr = result.chainRolls.map((r, i) =>
+          ` ${result.critical ? '+' : '-'}${r}${result.critical && r === 10 ? '⚡' : result.fumble && r === 1 ? '☠' : ''}`
+        ).join('');
+      }
+      detailEl.textContent =
+        `骰子 ${result.roll}${chainStr} + ${result.modifier}(修正) = ${result.total}  |  DV ${result.dv}`;
+
+    } else if (result.type === 'initiative') {
+      judgEl.textContent = '';
+      detailEl.textContent = `骰子 ${result.rolls[0]} + ${result.modifier}(REF) = ${result.total}`;
+
+    } else {
+      judgEl.textContent = '';
+      const modStr = result.modifier ? ` + ${result.modifier}` : '';
+      detailEl.textContent = `[${result.rolls.join(', ')}]${modStr} = ${result.total}`;
+    }
+  }
+
+  // ── Log ────────────────────────────────────────────────────────────────────
+
+  function addToLog(result) {
+    const logEl = document.getElementById('roll-log');
+    const emptyEl = document.getElementById('log-empty');
+    if (emptyEl) emptyEl.remove();
+
+    let entryClass = 'log-entry';
+    let totalClass = 'log-total-neutral';
+    let badge = '';
+    let detail = '';
+
+    if (result.type === 'skill') {
+      if (result.critical && result.success) {
+        entryClass += ' log-critical';
+        totalClass = 'log-total-crit';
+        badge = '<span class="log-badge badge-crit">CRIT</span>';
+      } else if (result.fumble) {
+        entryClass += ' log-fumble';
+        totalClass = 'log-total-fumble';
+        badge = '<span class="log-badge badge-fumble">FUMBLE</span>';
+      } else if (result.success) {
+        entryClass += ' log-success';
+        totalClass = 'log-total-success';
+        badge = '<span class="log-badge badge-win">✓</span>';
+      } else {
+        entryClass += ' log-fail';
+        totalClass = 'log-total-fail';
+        badge = '<span class="log-badge badge-fail">✗</span>';
+      }
+      let chainStr = '';
+      if (result.chainRolls && result.chainRolls.length) {
+        chainStr = result.chainRolls.map(r =>
+          result.critical ? `+${r}` : `-${r}`
+        ).join('');
+      }
+      detail = `${result.roll}${chainStr} + ${result.modifier} = <span class="${totalClass}">${result.total}</span> (DV ${result.dv})`;
+
+    } else if (result.type === 'initiative') {
+      detail = `d10:${result.rolls[0]} + REF:${result.modifier} = <span class="log-total-neutral">${result.total}</span>`;
+
+    } else {
+      const modStr = result.modifier ? ` + ${result.modifier}` : '';
+      detail = `[${result.rolls.join(', ')}]${modStr} = <span class="log-total-neutral">${result.total}</span>`;
+    }
+
+    const entry = document.createElement('div');
+    entry.className = entryClass;
+    entry.innerHTML = `
+      <span class="log-time">[${result.timestamp}]</span>
+      <span class="log-type"> ${badge}${result.label}</span>
+      <br>${detail}
+    `;
+
+    logEl.insertBefore(entry, logEl.firstChild);
+  }
+
+  function clearLog() {
+    const logEl = document.getElementById('roll-log');
+    logEl.innerHTML = '<div id="log-empty">// 等待投掷... //</div>';
+  }
+
+  // ── Build Damage Dice Area ─────────────────────────────────────────────────
+
+  function buildDiceArea(rolls, sides) {
+    const arena = document.getElementById('extra-dice-area');
+    arena.innerHTML = '';
+    arena.style.display = rolls.length > 1 ? 'flex' : 'none';
+
+    return rolls.map((_, i) => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'die-wrapper';
+      const face = document.createElement('div');
+      face.className = 'die-face rolling';
+      face.dataset.sides = sides;
+      face.textContent = '?';
+      const lbl = document.createElement('div');
+      lbl.className = 'die-label';
+      lbl.textContent = `D${sides}`;
+      wrapper.appendChild(face);
+      wrapper.appendChild(lbl);
+      arena.appendChild(wrapper);
+      return face;
+    });
+  }
+
+  // ── Disable / Enable Buttons ───────────────────────────────────────────────
+
+  function setButtonsDisabled(disabled) {
+    document.querySelectorAll('.btn').forEach(b => {
+      if (disabled) b.setAttribute('disabled', '');
+      else b.removeAttribute('disabled');
+    });
+  }
+
+  // ── Skill Check Action ─────────────────────────────────────────────────────
+
+  function doSkillCheck() {
+    if (animActive) return;
+    animActive = true;
+    setButtonsDisabled(true);
+
+    const stat  = clamp(parseInt(document.getElementById('stat-val').value)  || 4, 1, 8);
+    const skill = clamp(parseInt(document.getElementById('skill-val').value) || 0, 0, 10);
+    const dv    = parseInt(document.getElementById('dv-select').value);
+    const result = skillCheck(stat, skill, dv, `技能检定 (STAT:${stat} 技能:${skill})`);
+
+    const mainDie   = document.getElementById('main-die');
+    const extraArea = document.getElementById('extra-dice-area');
+    mainDie.className = 'die-face rolling';
+    mainDie.dataset.sides = '10';
+    extraArea.style.display = 'none';
+    extraArea.innerHTML = '';
+
+    document.getElementById('result-total').textContent = '—';
+    document.getElementById('result-judgment').textContent = '';
+    document.getElementById('result-detail').textContent = '';
+    document.getElementById('result-label').textContent = '投掷中...';
+
+    animateDice(mainDie, result.roll, 900, () => {
+      mainDie.className = 'die-face';
+      document.getElementById('main-die-extra').textContent = '';
+
+      if (result.chainRolls && result.chainRolls.length) {
+        // Show chain dice sequentially
+        extraArea.style.display = 'flex';
+        let chainIdx = 0;
+
+        function animateNextChainDie() {
+          if (chainIdx >= result.chainRolls.length) {
+            finalizeSkill(mainDie, result);
+            return;
+          }
+          const rawVal = result.chainRolls[chainIdx];
+          const signedVal = result.critical ? rawVal : -rawVal;
+          const wrapper = document.createElement('div');
+          wrapper.className = 'die-wrapper';
+          const face = document.createElement('div');
+          face.className = 'die-face rolling';
+          face.dataset.sides = '10';
+          face.textContent = '?';
+          const lbl = document.createElement('div');
+          lbl.className = 'die-label';
+          lbl.textContent = result.critical ? `+${rawVal}` : `-${rawVal}`;
+          wrapper.appendChild(face);
+          wrapper.appendChild(lbl);
+          extraArea.appendChild(wrapper);
+          animateDice(face, rawVal, 550, () => {
+            face.className = result.critical ? 'die-face critical' : 'die-face fumble';
+            lbl.textContent = result.critical ? `+${rawVal}` : `-${rawVal}`;
+            chainIdx++;
+            animateNextChainDie();
+          });
+        }
+        animateNextChainDie();
+      } else {
+        finalizeSkill(mainDie, result);
+      }
+    });
+  }
+
+  function finalizeSkill(mainDie, result) {
+    if (result.critical && result.success) {
+      mainDie.className = 'die-face critical';
+    } else if (result.fumble) {
+      mainDie.className = 'die-face fumble';
+    } else if (result.success) {
+      mainDie.className = 'die-face success-glow';
+    } else {
+      mainDie.className = 'die-face';
+    }
+    setResult(result);
+    addToLog(result);
+    animActive = false;
+    setButtonsDisabled(false);
+  }
+
+  // ── Quick Roll (damage / custom) ───────────────────────────────────────────
+
+  function quickRoll(numDice, sides, modifier, label) {
+    if (animActive) return;
+    animActive = true;
+    setButtonsDisabled(true);
+
+    const result = rollDamage(numDice, sides, modifier, label);
+
+    document.getElementById('main-die-extra').textContent = '';
+    document.getElementById('result-total').textContent = '—';
+    document.getElementById('result-judgment').textContent = '';
+    document.getElementById('result-detail').textContent = '';
+    document.getElementById('result-label').textContent = '投掷中...';
+
+    const mainDie = document.getElementById('main-die');
+    mainDie.className = 'die-face rolling';
+    mainDie.dataset.sides = sides;
+
+    if (numDice === 1) {
+      document.getElementById('extra-dice-area').style.display = 'none';
+      document.getElementById('extra-dice-area').innerHTML = '';
+      animateDice(mainDie, result.rolls[0], 800, () => {
+        mainDie.className = 'die-face';
+        setResult(result);
+        addToLog(result);
+        animActive = false;
+        setButtonsDisabled(false);
+      });
+    } else {
+      mainDie.textContent = '?';
+      const diceEls = buildDiceArea(result.rolls, sides);
+      // first die in main slot
+      diceEls[0] && animateDice(mainDie, result.rolls[0], 800, null);
+      animateMultiDice(diceEls, result.rolls, 900, () => {
+        mainDie.className = 'die-face';
+        diceEls.forEach(el => { el.className = 'die-face'; });
+        setResult(result);
+        addToLog(result);
+        animActive = false;
+        setButtonsDisabled(false);
+      });
+    }
+  }
+
+  // ── Custom Roll ────────────────────────────────────────────────────────────
+
+  function doCustomRoll() {
+    const num   = clamp(parseInt(document.getElementById('custom-num').value)   || 1, 1, 20);
+    const sides = parseInt(document.getElementById('custom-sides').value) || 10;
+    const mod   = clamp(parseInt(document.getElementById('custom-mod').value)   || 0, -20, 20);
+    const modStr = mod !== 0 ? (mod > 0 ? `+${mod}` : `${mod}`) : '';
+    quickRoll(num, sides, mod, `${num}d${sides}${modStr}`);
+  }
+
+  // ── Initiative Modal ───────────────────────────────────────────────────────
+
+  function openInitModal() {
+    document.getElementById('init-modal').classList.add('open');
+    document.getElementById('init-ref').focus();
+  }
+
+  function closeInitModal() {
+    document.getElementById('init-modal').classList.remove('open');
+  }
+
+  function confirmInitiative() {
+    const ref = clamp(parseInt(document.getElementById('init-ref').value) || 4, 1, 8);
+    closeInitModal();
+    if (animActive) return;
+    animActive = true;
+    setButtonsDisabled(true);
+
+    const result = rollInitiative(ref);
+
+    document.getElementById('main-die-extra').textContent = '';
+    document.getElementById('result-total').textContent = '—';
+    document.getElementById('result-judgment').textContent = '';
+    document.getElementById('result-label').textContent = '投掷先攻...';
+    document.getElementById('extra-dice-area').style.display = 'none';
+    document.getElementById('extra-dice-area').innerHTML = '';
+
+    const mainDie = document.getElementById('main-die');
+    mainDie.className = 'die-face rolling';
+    mainDie.dataset.sides = '10';
+
+    animateDice(mainDie, result.rolls[0], 800, () => {
+      mainDie.className = 'die-face success-glow';
+      setResult(result);
+      addToLog(result);
+      animActive = false;
+      setButtonsDisabled(false);
+    });
+  }
+
+  // Close modal on backdrop click
+  document.getElementById('init-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeInitModal();
+  });
+
+  // Enter key in init REF field
+  document.getElementById('init-ref').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') confirmInitiative();
+    if (e.key === 'Escape') closeInitModal();
+  });
+
+  // Keyboard shortcut: Space/Enter on skill check when not in input
+  document.addEventListener('keydown', function(e) {
+    if ((e.key === ' ' || e.key === 'Enter') &&
+        document.activeElement.tagName !== 'INPUT' &&
+        document.activeElement.tagName !== 'SELECT' &&
+        document.activeElement.tagName !== 'BUTTON') {
+      e.preventDefault();
+      doSkillCheck();
+    }
+  });
+
+  // ── Footer Clock ───────────────────────────────────────────────────────────
+
+  function updateClock() {
+    document.getElementById('footer-time').textContent = new Date().toLocaleTimeString('zh-CN');
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ── CHARACTER SYSTEM ──────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
+
+  const ROLES = {
+    rockerboy: { cn: '摇滚客', en: 'Rockerboy', ability: 'Charismatic Impact 魅力影响',
+      desc: '艺术家与煽动者。通过表演和言论影响人群，挑战公司制度。' },
+    solo:      { cn: '孤狼',   en: 'Solo',      ability: 'Combat Awareness 战斗感知',
+      desc: '雇佣兵、保镖、暗杀者。专精战斗，可强化命中、伤害或防御。' },
+    netrunner: { cn: '网络奇侠', en: 'Netrunner', ability: 'Interface 接口',
+      desc: '潜入网络架构的黑客。操纵程序，攻入企业冰墙。' },
+    tech:      { cn: '技术专家', en: 'Tech',     ability: 'Maker 制造者',
+      desc: '工程师与改装师。打造、改造、修复任何机械与电子设备。' },
+    medtech:   { cn: '医疗专家', en: 'Medtech',  ability: 'Medicine 医学',
+      desc: '街头医生。稳定伤员、治疗创伤、植入或拆除义体。' },
+    media:     { cn: '媒体人', en: 'Media',     ability: 'Credibility 公信力',
+      desc: '记者、博主、主播。调查报道，揭露黑幕，唤起公众关注。' },
+    lawman:    { cn: '执法者', en: 'Lawman',    ability: 'Backup 后援',
+      desc: '警察、警长或赏金猎人。依靠组织调遣援军与情报。' },
+    exec:      { cn: '公司经理', en: 'Exec',     ability: 'Teamwork 团队协作',
+      desc: '企业玩家。统御下属，调配公司资源，攀爬权力金字塔。' },
+    fixer:     { cn: '掮客',   en: 'Fixer',     ability: 'Operator 中介',
+      desc: '资源中介。游走灰区，撮合交易，提供任何能买到的东西。' },
+    nomad:     { cn: '浪人',   en: 'Nomad',     ability: 'Moto 载具',
+      desc: '游牧家族成员。调遣家族车辆与资源，纵横荒野与公路。' }
+  };
+
+  const STATS_DEF = [
+    { key: 'INT',  cn: '智力'   },
+    { key: 'REF',  cn: '反应'   },
+    { key: 'DEX',  cn: '灵巧'   },
+    { key: 'TECH', cn: '技术'   },
+    { key: 'COOL', cn: '冷静'   },
+    { key: 'WILL', cn: '意志'   },
+    { key: 'LUCK', cn: '运气'   },
+    { key: 'MOVE', cn: '移动'   },
+    { key: 'BODY', cn: '体魄'   },
+    { key: 'EMP',  cn: '同感'   }
+  ];
+
+  const SKILLS_DEF = {
+    '通用 AWARENESS': [
+      { key: 'concentration',     cn: '集中',         stat: 'WILL' },
+      { key: 'conceal-reveal',    cn: '隐匿/搜寻',    stat: 'INT'  },
+      { key: 'perception',        cn: '感知',         stat: 'INT'  },
+      { key: 'tracking',          cn: '追踪',         stat: 'INT'  }
+    ],
+    '体能 BODY': [
+      { key: 'athletics',         cn: '运动',         stat: 'DEX'  },
+      { key: 'brawling',          cn: '拳搏',         stat: 'DEX'  },
+      { key: 'endurance',         cn: '耐力',         stat: 'WILL' },
+      { key: 'evasion',           cn: '闪避',         stat: 'DEX'  },
+      { key: 'martial-arts',      cn: '武术',         stat: 'DEX'  }
+    ],
+    '武器 COMBAT': [
+      { key: 'archery',           cn: '弓术',         stat: 'REF'  },
+      { key: 'autofire',          cn: '全自动',       stat: 'REF'  },
+      { key: 'handgun',           cn: '手枪',         stat: 'REF'  },
+      { key: 'heavy-weapons',     cn: '重武器',       stat: 'REF'  },
+      { key: 'melee',             cn: '近战武器',     stat: 'DEX'  },
+      { key: 'shoulder-arms',     cn: '长枪',         stat: 'REF'  }
+    ],
+    '驾驶 DRIVING': [
+      { key: 'drive-land',        cn: '陆地驾驶',     stat: 'REF'  },
+      { key: 'pilot-air',         cn: '飞行驾驶',     stat: 'REF'  }
+    ],
+    '社交 SOCIAL': [
+      { key: 'persuasion',        cn: '说服',         stat: 'COOL' },
+      { key: 'human-perception',  cn: '识人',         stat: 'EMP'  },
+      { key: 'streetwise',        cn: '街头智慧',     stat: 'COOL' },
+      { key: 'interrogation',     cn: '审讯',         stat: 'COOL' }
+    ],
+    '技术 TECHNIQUE': [
+      { key: 'basic-tech',        cn: '基础技术',     stat: 'TECH' },
+      { key: 'cybertech',         cn: '义体技术',     stat: 'TECH' },
+      { key: 'electronics',       cn: '电子',         stat: 'TECH' },
+      { key: 'first-aid',         cn: '急救',         stat: 'TECH' },
+      { key: 'hacking',           cn: '黑客',         stat: 'TECH' },
+      { key: 'stealth',           cn: '潜行',         stat: 'DEX'  }
+    ]
+  };
+
+  const STORAGE_KEY    = 'cyberpunk_red_characters';
+  const STORAGE_ACTIVE = 'cyberpunk_red_active_char';
+
+  let characters  = [];
+  let activeCharId = null;
+  let editingChar  = null;
+
+  // ── Persistence ──
+
+  function loadCharactersFromStorage() {
+    try {
+      const data = localStorage.getItem(STORAGE_KEY);
+      characters = data ? JSON.parse(data) : [];
+      activeCharId = localStorage.getItem(STORAGE_ACTIVE) || null;
+    } catch (e) {
+      characters = [];
+      activeCharId = null;
+    }
+  }
+
+  function saveCharactersToStorage() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(characters));
+      if (activeCharId) localStorage.setItem(STORAGE_ACTIVE, activeCharId);
+      else localStorage.removeItem(STORAGE_ACTIVE);
+    } catch (e) {
+      flashMessage('保存失败: ' + e.message);
+    }
+  }
+
+  // ── Character Factory ──
+
+  function emptyCharacter() {
+    const stats = {};
+    STATS_DEF.forEach(s => stats[s.key] = 4);
+    const skills = {};
+    Object.values(SKILLS_DEF).flat().forEach(sk => skills[sk.key] = 0);
+    return {
+      id: 'char_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+      handle: '', realName: '', role: '',
+      stats, skills, notes: '',
+      createdAt: Date.now()
+    };
+  }
+
+  function newCharacter() {
+    editingChar = emptyCharacter();
+    renderCharacterForm();
+    flashMessage('已新建空白角色');
+  }
+
+  function loadCharacterIntoForm(id) {
+    const c = characters.find(c => c.id === id);
+    if (!c) return;
+    editingChar = JSON.parse(JSON.stringify(c));
+    // backfill new skills if older characters miss them
+    Object.values(SKILLS_DEF).flat().forEach(sk => {
+      if (!(sk.key in editingChar.skills)) editingChar.skills[sk.key] = 0;
+    });
+    renderCharacterForm();
+  }
+
+  function saveCharacter() {
+    if (!editingChar) return;
+    syncFormToEditing();
+    if (!editingChar.handle.trim()) {
+      flashMessage('⚠ 请填写代号 HANDLE');
+      document.getElementById('char-handle').focus();
+      return;
+    }
+    const idx = characters.findIndex(c => c.id === editingChar.id);
+    if (idx >= 0) characters[idx] = editingChar;
+    else characters.push(editingChar);
+    saveCharactersToStorage();
+    renderCharacterList();
+    renderActiveCharBanner();
+    flashMessage('✓ 角色已保存');
+  }
+
+  function deleteCharacter(id) {
+    if (!confirm('确认删除该角色？此操作不可撤销。')) return;
+    characters = characters.filter(c => c.id !== id);
+    if (activeCharId === id) activeCharId = null;
+    if (editingChar && editingChar.id === id) editingChar = emptyCharacter();
+    saveCharactersToStorage();
+    renderCharacterList();
+    renderCharacterForm();
+    renderActiveCharBanner();
+    flashMessage('已删除角色');
+  }
+
+  function setActiveCharacter(id) {
+    activeCharId = id;
+    saveCharactersToStorage();
+    renderCharacterList();
+    renderActiveCharBanner();
+  }
+
+  function setActiveAndGo() {
+    if (!editingChar) return;
+    syncFormToEditing();
+    if (!editingChar.handle.trim()) {
+      flashMessage('⚠ 请填写代号 HANDLE');
+      return;
+    }
+    const idx = characters.findIndex(c => c.id === editingChar.id);
+    if (idx >= 0) characters[idx] = editingChar;
+    else characters.push(editingChar);
+    activeCharId = editingChar.id;
+    saveCharactersToStorage();
+    renderCharacterList();
+    renderActiveCharBanner();
+    switchView('dice');
+    flashMessage('★ ' + editingChar.handle + ' 已出战');
+  }
+
+  function getActiveCharacter() {
+    return characters.find(c => c.id === activeCharId);
+  }
+
+  // ── Form ↔ Data Sync ──
+
+  function syncFormToEditing() {
+    if (!editingChar) return;
+    editingChar.handle   = document.getElementById('char-handle').value;
+    editingChar.realName = document.getElementById('char-realname').value;
+    editingChar.role     = document.getElementById('char-role').value;
+    editingChar.notes    = document.getElementById('char-notes').value;
+  }
+
+  // ── Renderers ──
+
+  function renderCharacterForm() {
+    if (!editingChar) editingChar = emptyCharacter();
+    document.getElementById('char-handle').value   = editingChar.handle || '';
+    document.getElementById('char-realname').value = editingChar.realName || '';
+    document.getElementById('char-role').value     = editingChar.role || '';
+    document.getElementById('char-notes').value    = editingChar.notes || '';
+    renderRoleDisplay();
+    renderStatsGrid();
+    renderSkillsGrid();
+    updateDerivedStats();
+    updatePointsBudget();
+  }
+
+  function renderRoleDisplay() {
+    const role = editingChar?.role;
+    const display = document.getElementById('role-display');
+    if (!role || !ROLES[role]) {
+      display.style.display = 'none';
+      return;
+    }
+    const r = ROLES[role];
+    display.style.display = 'block';
+    document.getElementById('role-name').textContent    = `${r.cn} · ${r.en}`;
+    document.getElementById('role-desc').textContent    = r.desc;
+    document.getElementById('role-ability').textContent = '★ 核心能力: ' + r.ability;
+  }
+
+  function renderStatsGrid() {
+    const grid = document.getElementById('stats-grid');
+    grid.innerHTML = '';
+    STATS_DEF.forEach(s => {
+      const v = editingChar.stats[s.key];
+      const item = document.createElement('div');
+      item.className = 'stat-item';
+      item.innerHTML = `
+        <div class="stat-name">
+          <span class="stat-en">${s.key}</span>
+          <span class="stat-cn">${s.cn}</span>
+        </div>
+        <div class="stat-controls">
+          <button class="stat-btn" onclick="adjustStat('${s.key}', -1)">−</button>
+          <span class="stat-value" id="stat-${s.key}">${v}</span>
+          <button class="stat-btn" onclick="adjustStat('${s.key}', 1)">+</button>
+        </div>
+      `;
+      grid.appendChild(item);
+    });
+  }
+
+  function adjustStat(key, delta) {
+    if (!editingChar) return;
+    const v = (editingChar.stats[key] || 4) + delta;
+    if (v < 1 || v > 8) return;
+    editingChar.stats[key] = v;
+    document.getElementById(`stat-${key}`).textContent = v;
+    updateDerivedStats();
+    updatePointsBudget();
+  }
+
+  function applyStatMethod(method) {
+    if (!editingChar) return;
+    if (method === 'pointbuy') {
+      STATS_DEF.forEach(s => editingChar.stats[s.key] = 4);
+      flashMessage('已重置为基础 4，请用 +/- 分配点数');
+    } else if (method === 'classic') {
+      const arr = [8, 7, 7, 6, 6, 6, 5, 5, 4, 3];
+      // Shuffle so player can re-roll different distributions
+      const shuffled = arr.slice().sort(() => Math.random() - 0.5);
+      STATS_DEF.forEach((s, i) => editingChar.stats[s.key] = shuffled[i]);
+      flashMessage('经典阵列 [8,7,7,6,6,6,5,5,4,3] 已随机分配');
+    } else if (method === 'random') {
+      STATS_DEF.forEach(s => {
+        // 2d4 (range 2-8) gives bell curve around 5
+        editingChar.stats[s.key] = clamp(rand(1,4) + rand(1,4), 2, 8);
+      });
+      flashMessage('已随机生成 (2d4)');
+    }
+    renderStatsGrid();
+    updateDerivedStats();
+    updatePointsBudget();
+  }
+
+  function updatePointsBudget() {
+    if (!editingChar) return;
+    const total = Object.values(editingChar.stats).reduce((a, b) => a + b, 0);
+    const remaining = 62 - total;
+    const el = document.getElementById('points-budget');
+    el.innerHTML = `已用: <span class="num">${total}</span> · 剩余 <span class="num">${remaining}</span> / 62`;
+    el.classList.toggle('over', remaining < 0);
+  }
+
+  function updateDerivedStats() {
+    if (!editingChar) return;
+    const s = editingChar.stats;
+    const hp       = 10 + 5 * Math.floor((s.BODY + s.WILL) / 2);
+    const humanity = s.EMP * 10;
+    const death    = s.BODY;
+    const walk     = s.MOVE * 2;
+    const run      = s.MOVE * 4;
+    const wound    = Math.ceil(hp / 2);
+
+    document.getElementById('d-hp').textContent       = hp;
+    document.getElementById('d-humanity').textContent = humanity;
+    document.getElementById('d-death').textContent    = death;
+    document.getElementById('d-walk').textContent     = walk + 'm';
+    document.getElementById('d-run').textContent      = run + 'm';
+    document.getElementById('d-wound').textContent    = wound;
+  }
+
+  function renderSkillsGrid() {
+    const grid = document.getElementById('skills-grid');
+    grid.innerHTML = '';
+    Object.entries(SKILLS_DEF).forEach(([cat, skills]) => {
+      const catDiv = document.createElement('div');
+      catDiv.className = 'skill-category';
+      catDiv.textContent = cat;
+      grid.appendChild(catDiv);
+      skills.forEach(sk => {
+        const v = editingChar.skills[sk.key] || 0;
+        const item = document.createElement('div');
+        item.className = 'skill-item';
+        item.innerHTML = `
+          <div class="skill-name">${sk.cn}<small>${sk.stat}</small></div>
+          <input type="number" class="skill-input" min="0" max="10" value="${v}"
+                 onchange="setSkill('${sk.key}', this.value)">
+        `;
+        grid.appendChild(item);
+      });
+    });
+  }
+
+  function setSkill(key, val) {
+    if (!editingChar) return;
+    editingChar.skills[key] = clamp(parseInt(val) || 0, 0, 10);
+  }
+
+  function renderCharacterList() {
+    const list  = document.getElementById('char-list');
+    const count = document.getElementById('char-count');
+    if (!list) return;
+    count.textContent = characters.length + ' 角色';
+    if (characters.length === 0) {
+      list.innerHTML = '<div id="char-list-empty">// 名册空空如也 //<br><br>从左侧创建第一个角色</div>';
+      return;
+    }
+    list.innerHTML = characters.map(c => {
+      const role = ROLES[c.role];
+      const isActive = (c.id === activeCharId);
+      const hp = 10 + 5 * Math.floor((c.stats.BODY + c.stats.WILL) / 2);
+      const stats = `INT${c.stats.INT} REF${c.stats.REF} BODY${c.stats.BODY} EMP${c.stats.EMP} · HP${hp}`;
+      return `
+        <div class="char-card ${isActive ? 'active' : ''}">
+          <div class="char-card-handle">${isActive ? '★ ' : ''}${escapeHtml(c.handle || '(无名)')}</div>
+          <div class="char-card-role">${role ? role.cn + ' · ' + role.en : '未选择职业'}</div>
+          <div class="char-card-stats">${stats}</div>
+          <div class="char-card-actions">
+            <button class="btn btn-sm" onclick="loadCharacterIntoForm('${c.id}')">编辑</button>
+            <button class="btn btn-sm btn-yellow" onclick="setActiveCharacter('${c.id}')">${isActive ? '出战中' : '设为出战'}</button>
+            <button class="btn btn-sm" onclick="deleteCharacter('${c.id}')">删除</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function renderActiveCharBanner() {
+    const banner = document.getElementById('active-char-banner');
+    const active = getActiveCharacter();
+    if (!active) {
+      banner.classList.add('hidden');
+      return;
+    }
+    banner.classList.remove('hidden');
+    document.getElementById('banner-handle').textContent = active.handle || '(无名)';
+    const role = ROLES[active.role];
+    document.getElementById('banner-role').textContent =
+      role ? `${role.cn} · ${role.en}` : '— 无职业';
+
+    const hp = 10 + 5 * Math.floor((active.stats.BODY + active.stats.WILL) / 2);
+    document.getElementById('banner-hp').textContent  = hp;
+    document.getElementById('banner-hmn').textContent = active.stats.EMP * 10;
+
+    document.getElementById('banner-stats').innerHTML = STATS_DEF.map(s => `
+      <div class="banner-stat" onclick="useStatForRoll('${s.key}', ${active.stats[s.key]})"
+           title="${s.cn} - 点击填入检定的 STAT">
+        <span class="banner-stat-label">${s.key}</span>
+        <span class="banner-stat-value">${active.stats[s.key]}</span>
+      </div>
+    `).join('');
+
+    // Populate skill picker with character's non-zero skills
+    const sel = document.getElementById('banner-skill-select');
+    const skillOptions = ['<option value="">-- 选择技能 --</option>'];
+    Object.entries(SKILLS_DEF).forEach(([cat, skills]) => {
+      const learnedSkills = skills.filter(sk => (active.skills[sk.key] || 0) > 0);
+      if (learnedSkills.length === 0) return;
+      skillOptions.push(`<optgroup label="${cat}">`);
+      learnedSkills.forEach(sk => {
+        const lvl = active.skills[sk.key];
+        const statVal = active.stats[sk.stat];
+        skillOptions.push(
+          `<option value="${sk.key}" data-stat="${sk.stat}" data-stat-val="${statVal}" data-skill-val="${lvl}">
+            ${sk.cn} (${sk.stat}${statVal} + 技能${lvl} = ${statVal+lvl})
+          </option>`
+        );
+      });
+      skillOptions.push('</optgroup>');
+    });
+    if (skillOptions.length === 1) {
+      skillOptions.push('<option value="" disabled>(尚未学习任何技能)</option>');
+    }
+    sel.innerHTML = skillOptions.join('');
+  }
+
+  function useStatForRoll(key, val) {
+    document.getElementById('stat-val').value = val;
+    document.getElementById('stat-val').focus();
+    flashMessage(`已填入 ${key}: ${val}`);
+  }
+
+  function useSkillForRoll(skillKey) {
+    if (!skillKey) return;
+    const active = getActiveCharacter();
+    if (!active) return;
+    let skillDef;
+    Object.values(SKILLS_DEF).forEach(arr => {
+      arr.forEach(sk => { if (sk.key === skillKey) skillDef = sk; });
+    });
+    if (!skillDef) return;
+    const statVal  = active.stats[skillDef.stat];
+    const skillVal = active.skills[skillKey] || 0;
+    document.getElementById('stat-val').value  = statVal;
+    document.getElementById('skill-val').value = skillVal;
+    flashMessage(`${skillDef.cn}: ${skillDef.stat}${statVal} + 技能${skillVal}`);
+    // reset the select
+    document.getElementById('banner-skill-select').value = '';
+  }
+
+  // ── Tab Switching ──
+
+  function switchView(view) {
+    document.querySelectorAll('.tab').forEach(t =>
+      t.classList.toggle('active', t.dataset.view === view));
+    document.querySelectorAll('.view').forEach(v =>
+      v.classList.toggle('active', v.id === 'view-' + view));
+    if (view === 'character') {
+      if (!editingChar) {
+        if (activeCharId && characters.find(c => c.id === activeCharId)) {
+          loadCharacterIntoForm(activeCharId);
+        } else {
+          newCharacter();
+        }
+      }
+    }
+  }
+
+  // ── Helpers ──
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, m =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+  }
+
+  let flashTimeout = null;
+  function flashMessage(text) {
+    const el = document.getElementById('flash-msg');
+    el.textContent = text;
+    el.classList.add('show');
+    if (flashTimeout) clearTimeout(flashTimeout);
+    flashTimeout = setTimeout(() => el.classList.remove('show'), 1800);
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // ── SERVER INTEGRATION ────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════════
+
+  const SRV_LS_KEY = 'cyberpunk_red_server_url';
+  const PLR_LS_KEY = 'cyberpunk_red_player_name';
+  let serverOnline    = false;
+  let pingIntervalId  = null;
+
+  function getServerUrl() {
+    return (document.getElementById('srv-url')?.value ?? '').replace(/\/$/, '')
+      || localStorage.getItem(SRV_LS_KEY)
+      || 'http://localhost:3000';
+  }
+
+  function getPlayerName() {
+    return (document.getElementById('srv-player')?.value ?? '').trim()
+      || localStorage.getItem(PLR_LS_KEY)
+      || '玩家';
+  }
+
+  function setConnStatus(state, label) {
+    const dot  = document.getElementById('conn-dot');
+    const text = document.getElementById('conn-status-text');
+    if (!dot || !text) return;
+    dot.className  = 'conn-dot ' + state;   // online | offline | checking
+    text.textContent = label;
+    serverOnline   = (state === 'online');
+  }
+
+  async function pingServer() {
+    const url = getServerUrl();
+    localStorage.setItem(SRV_LS_KEY, url);
+    localStorage.setItem(PLR_LS_KEY, getPlayerName());
+    setConnStatus('checking', '连接中...');
+    try {
+      const res = await fetch(`${url}/api/ping`, { signal: AbortSignal.timeout(3000) });
+      if (!res.ok) throw new Error(res.status);
+      const data = await res.json();
+      const sessionLabel = data.sessionActive
+        ? ` · Session: ${data.sessionName}`
+        : '';
+      setConnStatus('online', `在线${sessionLabel}`);
+      if (data.sessionActive) {
+        document.getElementById('session-status').textContent = data.sessionName;
+        document.getElementById('session-status').classList.add('active');
+      }
+    } catch (e) {
+      setConnStatus('offline', '离线 — 服务器未启动');
+    }
+  }
+
+  // Auto-ping every 15s
+  function startPingLoop() {
+    pingServer();
+    pingIntervalId = setInterval(pingServer, 15000);
+  }
+
+  // ── Session Management ──
+
+  async function startSession() {
+    if (!serverOnline) { flashMessage('服务器未连接'); return; }
+    const name = document.getElementById('session-name').value.trim();
+    try {
+      const res  = await fetch(`${getServerUrl()}/api/session/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      const data = await res.json();
+      const el = document.getElementById('session-status');
+      el.textContent = data.session?.name ?? 'Session 进行中';
+      el.classList.add('active');
+      flashMessage(`✓ Session 已开始: ${data.session?.name}`);
+    } catch (e) {
+      flashMessage('无法开始 Session: ' + e.message);
+    }
+  }
+
+  async function endSession() {
+    if (!serverOnline) { flashMessage('服务器未连接'); return; }
+    try {
+      await fetch(`${getServerUrl()}/api/session/end`, { method: 'POST' });
+      const el = document.getElementById('session-status');
+      el.textContent = '无 Session';
+      el.classList.remove('active');
+      flashMessage('Session 已结束，数据已保存');
+    } catch (e) {
+      flashMessage('无法结束 Session: ' + e.message);
+    }
+  }
+
+  // ── Send Roll to Server ──
+
+  async function sendRollToServer(result) {
+    const autoSend = document.getElementById('toggle-rolls')?.checked;
+    if (!autoSend || !serverOnline) return;
+    const active = getActiveCharacter();
+    const payload = {
+      ...result,
+      player:    getPlayerName(),
+      character: active?.handle ?? '',
+      role:      active?.role   ?? '',
+    };
+    try {
+      await fetch(`${getServerUrl()}/api/roll`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+        signal:  AbortSignal.timeout(5000),
+      });
+    } catch (e) {
+      console.warn('[server] send roll failed:', e.message);
+    }
+  }
+
+  // ── Send Character to Server ──
+
+  async function sendCharacterToServer(char) {
+    if (!serverOnline) return;
+    try {
+      await fetch(`${getServerUrl()}/api/character`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(char),
+        signal:  AbortSignal.timeout(5000),
+      });
+    } catch (e) {
+      console.warn('[server] send character failed:', e.message);
+    }
+  }
+
+  async function pushCharacterNow() {
+    if (!editingChar) { flashMessage('无角色数据'); return; }
+    if (!serverOnline) { flashMessage('服务器未连接，先在联机面板测试连接'); return; }
+    syncFormToEditing();
+    await sendCharacterToServer(editingChar);
+    flashMessage(`✓ 已推送 ${editingChar.handle} 到 Discord`);
+  }
+
+  // ── Export / Clipboard ──
+
+  function exportJson() {
+    const url = `${getServerUrl()}/api/export/json`;
+    if (serverOnline) { window.open(url, '_blank'); return; }
+    // Fallback: export localStorage data
+    const data = {
+      exportedAt: new Date().toISOString(),
+      characters: characters,
+      note: '（服务器离线，仅包含本地角色数据，无 Session 投掷记录）',
+    };
+    downloadBlob(JSON.stringify(data, null, 2), 'cyberpunk-red-export.json', 'application/json');
+  }
+
+  function exportMarkdown() {
+    if (serverOnline) {
+      window.open(`${getServerUrl()}/api/export/markdown`, '_blank');
+      return;
+    }
+    // Fallback: generate markdown from characters only
+    const lines = ['# Cyberpunk RED Export', '', '## 角色'];
+    characters.forEach(c => {
+      const s = c.stats;
+      const hp = 10 + 5 * Math.floor(((s?.BODY ?? 4) + (s?.WILL ?? 4)) / 2);
+      lines.push(`- **${c.handle}** (${c.role || '?'}) HP:${hp}`);
+      if (c.notes) lines.push(`  > ${c.notes}`);
+    });
+    downloadBlob(lines.join('\n'), 'cyberpunk-red-export.md', 'text/markdown');
+  }
+
+  async function copyToClipboard() {
+    let text = '';
+    if (serverOnline) {
+      try {
+        const res = await fetch(`${getServerUrl()}/api/session`);
+        const s   = await res.json();
+        text = `=== ${s.name || 'Cyberpunk RED'} ===\n`;
+        text += `Session: ${s.active ? '进行中' : '已结束'} · 投掷 ${s.rollCount} 次\n`;
+        text += `角色: ${(s.characters || []).join(', ')}`;
+      } catch (e) {
+        text = '（获取 Session 数据失败）';
+      }
+    } else {
+      text = characters.map(c => {
+        const s = c.stats;
+        const hp = 10 + 5 * Math.floor(((s?.BODY ?? 4) + (s?.WILL ?? 4)) / 2);
+        return `【${c.handle}】${c.role || '?'} HP:${hp}`;
+      }).join('\n') || '（无角色数据）';
+    }
+    await navigator.clipboard.writeText(text).catch(() => {});
+    flashMessage('✓ 已复制到剪贴板');
+  }
+
+  function downloadBlob(content, filename, type) {
+    const blob = new Blob([content], { type });
+    const a = Object.assign(document.createElement('a'), {
+      href: URL.createObjectURL(blob),
+      download: filename,
+    });
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  // ── Patch roll finalization to fire server send ──
+
+  const _origFinalizeSkill = finalizeSkill;
+  finalizeSkill = function(mainDie, result) {
+    _origFinalizeSkill(mainDie, result);
+    sendRollToServer(result);
+  };
+
+  const _origQuickRollFinalize = function(result) {
+    sendRollToServer(result);
+  };
+
+  // Patch quickRoll / initiative to also send
+  const _origSetResult = setResult;
+  setResult = function(result) {
+    _origSetResult(result);
+    if (result.type !== 'skill') sendRollToServer(result);
+  };
+
+  // Patch setActiveAndGo to optionally push character
+  const _origSetActiveAndGo = setActiveAndGo;
+  setActiveAndGo = function() {
+    _origSetActiveAndGo();
+    const autoChar = document.getElementById('toggle-char')?.checked;
+    if (autoChar && serverOnline && editingChar) {
+      sendCharacterToServer(editingChar);
+    }
+  };
+
+  // ── Initialize Server Panel ──
+
+  function initServerPanel() {
+    const urlInput = document.getElementById('srv-url');
+    const plrInput = document.getElementById('srv-player');
+    if (urlInput) urlInput.value = localStorage.getItem(SRV_LS_KEY) || 'http://localhost:3000';
+    if (plrInput) plrInput.value = localStorage.getItem(PLR_LS_KEY) || '';
+    // Save on change
+    urlInput?.addEventListener('blur', () =>
+      localStorage.setItem(SRV_LS_KEY, urlInput.value));
+    plrInput?.addEventListener('blur', () =>
+      localStorage.setItem(PLR_LS_KEY, plrInput.value));
+    startPingLoop();
+  }
+
+  // ── Initialize Character System ──
+
+  function initCharacterSystem() {
+    // Populate role select
+    const sel = document.getElementById('char-role');
+    Object.entries(ROLES).forEach(([key, r]) => {
+      const opt = document.createElement('option');
+      opt.value = key;
+      opt.textContent = `${r.cn} · ${r.en}`;
+      sel.appendChild(opt);
+    });
+
+    // Wire up identity inputs
+    sel.addEventListener('change', () => {
+      if (editingChar) editingChar.role = sel.value;
+      renderRoleDisplay();
+    });
+    document.getElementById('char-handle').addEventListener('input', e => {
+      if (editingChar) editingChar.handle = e.target.value;
+    });
+    document.getElementById('char-realname').addEventListener('input', e => {
+      if (editingChar) editingChar.realName = e.target.value;
+    });
+    document.getElementById('char-notes').addEventListener('input', e => {
+      if (editingChar) editingChar.notes = e.target.value;
+    });
+
+    // Wire up tab buttons
+    document.querySelectorAll('.tab').forEach(t => {
+      t.addEventListener('click', () => switchView(t.dataset.view));
+    });
+
+    // Load saved data
+    loadCharactersFromStorage();
+    renderCharacterList();
+    renderActiveCharBanner();
+    // Init server panel
+    initServerPanel();
+  }
+
+  initCharacterSystem();
+</script>
+</body>
+</html>
